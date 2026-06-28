@@ -2,6 +2,8 @@ import { Platform } from "react-native";
 
 import type { ContactSyncPermission, ContactSyncResult, ContactSyncState, SyncedContact } from "../types";
 
+const MAX_SYNCED_CONTACTS = 12;
+
 const previewContacts: SyncedContact[] = [
   {
     id: "preview-1",
@@ -167,12 +169,12 @@ export async function syncTrustedContacts(enabled: boolean): Promise<ContactSync
   const response = await ContactsModule.getContactsAsync({
     fields: [ContactsModule.Fields.Name, ContactsModule.Fields.PhoneNumbers],
     sort: ContactsModule.SortTypes.FirstName,
-    pageSize: 12
+    pageSize: MAX_SYNCED_CONTACTS
   });
 
   const contacts = response.data
     .filter((contact) => Boolean(contact.name || contact.firstName || contact.lastName || contact.phoneNumbers?.length))
-    .slice(0, 12)
+    .slice(0, MAX_SYNCED_CONTACTS)
     .map((contact, index) => {
       const displayName =
         contact.name || [contact.firstName, contact.lastName].filter(Boolean).join(" ") || `Silent Contact ${index + 1}`;

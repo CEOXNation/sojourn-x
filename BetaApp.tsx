@@ -338,10 +338,10 @@ export default function BetaApp() {
       return;
     }
 
-    if (!contactSyncState.lastSyncedAt) {
+    if (!syncingContacts && !contactSyncState.lastSyncedAt) {
       void handleContactSync();
     }
-  }, [hydrated, profile.contactsSyncEnabled, syncingContacts]);
+  }, [hydrated, profile.contactsSyncEnabled, contactSyncState.lastSyncedAt]);
 
   const selectedRealm = useMemo(
     () => realms.find((realm) => realm.key === selectedRealmKey) ?? realms[0],
@@ -1750,7 +1750,8 @@ function ContactSyncCard({
 }) {
   const ui = useUiRuntime();
   const activeContacts = syncedContacts.slice(0, 4);
-  const hasRelayNumber = profile.phoneNumber.trim().length > 0;
+  const hasRelayNumber = hasValidRelayNumber(profile.phoneNumber);
+  const relayNumber = normalizeRelayNumber(profile.phoneNumber);
 
   return (
     <ContentCard>
@@ -1781,7 +1782,7 @@ function ContactSyncCard({
       )}
 
       {hasRelayNumber && (
-        <Text style={[styles.helperNote, styles.contactRelayLabel]}>Relay anchor: {profile.phoneNumber.trim()}</Text>
+        <Text style={[styles.helperNote, styles.contactRelayLabel]}>Relay anchor: {relayNumber}</Text>
       )}
 
       <TouchableOpacity
@@ -2081,6 +2082,14 @@ function contactStateLabel(matchState: SyncedContact["matchState"]): string {
     default:
       return "Relay";
   }
+}
+
+function normalizeRelayNumber(value: string): string {
+  return value.trim().replace(/[^\d+]/g, "");
+}
+
+function hasValidRelayNumber(value: string): boolean {
+  return normalizeRelayNumber(value).replace(/\D/g, "").length >= 7;
 }
 
 function contactSyncSummary(state: ContactSyncState): string {
