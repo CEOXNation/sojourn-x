@@ -15,7 +15,11 @@
     "governance:init": "node scripts/bootstrap-governance.mjs",
     "release:check": "node scripts/release-readiness.mjs --strict",
     "preflight": "npm run typecheck && npm run audit:realms && npm run release:check",
-    "vault:ready": "npm run governance:init && npm run preflight"
+    "vault:ready": "npm run governance:init && npm run preflight",
+    "eas:build:beta": "eas build --profile preview --platform all",
+    "eas:build:android": "eas build --profile preview --platform android",
+    "eas:build:ios": "eas build --profile preview --platform ios",
+    "eas:submit": "eas submit --profile production"
   },
   "dependencies": {
     "@react-native-async-storage/async-storage": "2.2.0",

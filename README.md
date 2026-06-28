@@ -102,6 +102,32 @@ npm start
 
 Then open with Expo Go, Android emulator, iOS simulator, or web depending on your Expo setup.
 
+## Beta Testing on Devices
+
+### Option 1 — Expo Go (Fastest, No Build Required)
+
+1. Install [Expo Go](https://expo.dev/client) on your iOS or Android device.
+2. Clone this repo and run `npm install && npm start`.
+3. Scan the QR code with Expo Go (Android) or the Camera app (iOS).
+
+### Option 2 — EAS Internal Build (Full Native Beta)
+
+Requires an [Expo account](https://expo.dev) and the EAS CLI (`npm install -g eas-cli`).
+
+```bash
+# Authenticate with Expo
+eas login
+
+# Build a beta APK (Android) and IPA (iOS) for internal distribution
+npm run eas:build:beta
+
+# Or build per platform
+npm run eas:build:android
+npm run eas:build:ios
+```
+
+Beta builds are distributed via a shareable EAS install link — no App Store or Play Store submission required.
+
 ### Advanced Engineering Commands
 
 ```bash
