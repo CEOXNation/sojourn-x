@@ -5,14 +5,19 @@
     "version": "0.1.0",
     "orientation": "portrait",
     "userInterfaceStyle": "dark",
-    "icon": "./src/assets/hero.png",
-    "splash": {
-      "image": "./src/assets/hero.png",
-      "resizeMode": "contain",
-      "backgroundColor": "#050505"
-    },
+    "icon": "./src/assets/icon-square.png",
     "assetBundlePatterns": [
       "**/*"
+    ],
+    "plugins": [
+      [
+        "expo-splash-screen",
+        {
+          "image": "./src/assets/hero.png",
+          "resizeMode": "contain",
+          "backgroundColor": "#050505"
+        }
+      ]
     ],
     "ios": {
       "supportsTablet": true,
@@ -21,12 +26,13 @@
     "android": {
       "package": "com.sojournx.app",
       "adaptiveIcon": {
-        "foregroundImage": "./src/assets/hero.png",
+        "foregroundImage": "./src/assets/icon-square.png",
         "backgroundColor": "#050505"
       }
     },
     "web": {
-      "bundler": "metro"
+      "bundler": "metro",
+      "backgroundColor": "#050505"
     },
     "extra": {
       "eas": {
