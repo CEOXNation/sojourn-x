@@ -72,8 +72,12 @@ The active app entrypoint now launches the first true SojournX beta with:
 - Private mode toggle for anonymized pulse posting
 - Customizable UI engine with accent color, interface style, and UI size presets
 - Advanced interface controls for layout density and corner style
+- Configurable tab transitions (slide, fade, zoom) with speed presets
+- Action customization controls for interaction intensity and tap feedback behavior
+- Built-in sound customization (sound packs, on/off, volume presets, live preview)
 - Dedicated Profile Studio with avatar presets, status, identity fields, and completion scoring
 - Realm-responsive visual themes that shift by active environment
+- Reference-aligned SojournX logo image asset included for app/web branding
 - Live feed and growth journal interactions
 - Resettable beta vault state for testing
 
@@ -107,6 +111,18 @@ npm start
 ```
 
 Then open with Expo Go, Android emulator, iOS simulator, or web depending on your Expo setup.
+
+## Deployment
+
+The web deploy target is configured for Vercel static export and the production domain is [sojournx.xyz](https://sojournx.xyz).
+
+Build locally with:
+
+```bash
+npm run build
+```
+
+That command emits `dist/`, which matches the current `vercel.json` output directory.
 
 ## Beta Testing on Devices
 

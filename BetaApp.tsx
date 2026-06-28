@@ -1,7 +1,11 @@
 import AsyncStorage from "@react-native-async-storage/async-storage";
+import { Audio } from "expo-av";
 import React, { useEffect, useMemo, useState } from "react";
 import {
+  Animated,
   Alert,
+  Easing,
+  Image,
   SafeAreaView,
   ScrollView,
   StatusBar,
@@ -33,11 +37,15 @@ import type {
   Realm,
   RealmEnvironment,
   RealmKey,
+  UiActionStyle,
   UiAccent,
   UiCorners,
   UiDensity,
   UiPreferences,
+  UiSoundPack,
   UiScale,
+  UiTransitionSpeed,
+  UiTransitionStyle,
   UiStylePreset
 } from "./src/types";
 
@@ -70,8 +78,18 @@ const defaultUiPreferences: UiPreferences = {
   style: "vault",
   scale: "balanced",
   density: "balanced",
-  corners: "balanced"
+  corners: "balanced",
+  transitionStyle: "slide",
+  transitionSpeed: "balanced",
+  actionStyle: "balanced",
+  soundEnabled: true,
+  soundPack: "soft",
+  soundVolume: 0.45
 };
+
+const publicSiteUrl = "https://sojournx.xyz";
+
+const logoImage = require("./src/assets/sojournx-logo.png");
 
 const accentPalette: Record<UiAccent, { primary: string; glow: string }> = {
   crimson: { primary: "#B00020", glow: "#FF1744" },
@@ -99,6 +117,30 @@ const cornerMap: Record<UiCorners, number> = {
   sharp: 0.7
 };
 
+const transitionDurationMap: Record<UiTransitionSpeed, number> = {
+  calm: 380,
+  balanced: 250,
+  snappy: 150
+};
+
+const actionScaleMap: Record<UiActionStyle, number> = {
+  subtle: 0.99,
+  balanced: 0.97,
+  bold: 0.94
+};
+
+const actionOpacityMap: Record<UiActionStyle, number> = {
+  subtle: 0.9,
+  balanced: 0.8,
+  bold: 0.65
+};
+
+const actionSoundLibrary: Record<UiSoundPack, number> = {
+  soft: require("./src/assets/sounds/soft-tap.wav"),
+  tech: require("./src/assets/sounds/tech-tap.wav"),
+  cosmic: require("./src/assets/sounds/cosmic-tap.wav")
+};
+
 const realmVisualThemes: Record<RealmKey, { background: string; wash: string; orb: string }> = {
   anonymous: { background: "#090A12", wash: "rgba(118,88,255,0.16)", orb: "#6D28D9" },
   social: { background: "#0D0B12", wash: "rgba(255,111,97,0.18)", orb: "#EA580C" },
@@ -113,11 +155,15 @@ type UiRuntime = {
   setPreferences: React.Dispatch<React.SetStateAction<UiPreferences>>;
   blendEnabled: boolean;
   setBlendEnabled: React.Dispatch<React.SetStateAction<boolean>>;
+  playUiAction: () => void;
   primaryColor: string;
   glowColor: string;
   scale: number;
   density: number;
   cornerScale: number;
+  actionScale: number;
+  actionOpacity: number;
+  transitionDuration: number;
   activeRealmTheme: { background: string; wash: string; orb: string };
 };
 
@@ -132,11 +178,15 @@ function useUiRuntime(): UiRuntime {
       setPreferences: () => undefined,
       blendEnabled: true,
       setBlendEnabled: () => undefined,
+      playUiAction: () => undefined,
       primaryColor: accentPalette.crimson.primary,
       glowColor: accentPalette.crimson.glow,
       scale: 1,
       density: 1,
       cornerScale: 1,
+      actionScale: actionScaleMap.balanced,
+      actionOpacity: actionOpacityMap.balanced,
+      transitionDuration: transitionDurationMap.balanced,
       activeRealmTheme: realmVisualThemes.anonymous
     };
   }
@@ -145,6 +195,8 @@ function useUiRuntime(): UiRuntime {
 }
 
 export default function BetaApp() {
+  const tabTransition = React.useRef(new Animated.Value(1)).current;
+
   const [ageConfirmed, setAgeConfirmed] = useState(false);
   const [hydrated, setHydrated] = useState(false);
   const [activeTab, setActiveTab] = useState<BetaTab>("Home");
@@ -258,15 +310,62 @@ export default function BetaApp() {
       setPreferences: setUiPreferences,
       blendEnabled,
       setBlendEnabled,
+      playUiAction: () => {
+        if (!uiPreferences.soundEnabled) {
+          return;
+        }
+
+        void (async () => {
+          try {
+            const { sound } = await Audio.Sound.createAsync(
+              actionSoundLibrary[uiPreferences.soundPack],
+              { shouldPlay: true, volume: uiPreferences.soundVolume }
+            );
+
+            sound.setOnPlaybackStatusUpdate((status) => {
+              if (status.isLoaded && status.didJustFinish) {
+                void sound.unloadAsync();
+              }
+            });
+          } catch {
+            return;
+          }
+        })();
+      },
       primaryColor,
       glowColor,
       scale: uiScale,
       density,
       cornerScale,
+      actionScale: actionScaleMap[uiPreferences.actionStyle],
+      actionOpacity: actionOpacityMap[uiPreferences.actionStyle],
+      transitionDuration: transitionDurationMap[uiPreferences.transitionSpeed],
       activeRealmTheme
     }),
     [uiPreferences, blendEnabled, primaryColor, glowColor, uiScale, density, cornerScale, activeRealmTheme]
   );
+
+  useEffect(() => {
+    if (!hydrated || !ageConfirmed || !profile.onboardingComplete) {
+      return;
+    }
+
+    tabTransition.setValue(0);
+
+    Animated.timing(tabTransition, {
+      toValue: 1,
+      duration: transitionDurationMap[uiPreferences.transitionSpeed],
+      easing: Easing.out(Easing.cubic),
+      useNativeDriver: true
+    }).start();
+  }, [
+    activeTab,
+    hydrated,
+    ageConfirmed,
+    profile.onboardingComplete,
+    tabTransition,
+    uiPreferences.transitionSpeed
+  ]);
 
   const betaMetrics = useMemo(
     () => [
@@ -277,6 +376,26 @@ export default function BetaApp() {
     ],
     [ageConfirmed, journalEntries.length, posts.length, profile.privateMode]
   );
+
+  const tabTransitionStyle =
+    uiPreferences.transitionStyle === "fade"
+      ? { opacity: tabTransition }
+      : uiPreferences.transitionStyle === "zoom"
+        ? {
+            opacity: tabTransition,
+            transform: [{ scale: tabTransition.interpolate({ inputRange: [0, 1], outputRange: [0.96, 1] }) }]
+          }
+        : {
+            opacity: tabTransition,
+            transform: [
+              {
+                translateX: tabTransition.interpolate({
+                  inputRange: [0, 1],
+                  outputRange: [18, 0]
+                })
+              }
+            ]
+          };
 
   let content: React.ReactNode;
 
@@ -309,6 +428,7 @@ export default function BetaApp() {
               { padding: Math.round(spacing.md * uiScale * density), paddingBottom: Math.round(40 * density) }
             ]}
           >
+            <Animated.View style={tabTransitionStyle}>
             {activeTab === "Home" && (
               <HomeScreen
                 profile={profile}
@@ -445,6 +565,7 @@ export default function BetaApp() {
                 }}
               />
             )}
+            </Animated.View>
           </ScrollView>
         </View>
       </SafeAreaView>
@@ -461,7 +582,7 @@ function AgeGate({ onEnter }: { onEnter: () => void }) {
     <SafeAreaView style={[styles.safe, { backgroundColor: colors.vaultBlack }]}>
       <View style={styles.ageGate}>
         <View style={[styles.glowOrb, { backgroundColor: ui.primaryColor }]} />
-        <Text style={[styles.logoMark, { color: ui.glowColor }]}>X</Text>
+        <Image source={logoImage} style={[styles.logoImage, { borderColor: ui.glowColor }]} />
         <Text style={styles.title}>SojournX Beta</Text>
         <Text style={styles.tagline}>Every version of you has a realm.</Text>
 
@@ -632,7 +753,11 @@ function Nav({
         return (
           <TouchableOpacity
             key={tab}
-            onPress={() => setActiveTab(tab)}
+            onPress={() => {
+              ui.playUiAction();
+              setActiveTab(tab);
+            }}
+            activeOpacity={ui.actionOpacity}
             style={[
               styles.navItem,
               active && styles.navItemActive,
@@ -1051,7 +1176,7 @@ function ProfileScreen({
         <InputField
           value={profile.website}
           onChangeText={(website) => setProfile((current) => ({ ...current, website }))}
-          placeholder="https://sojournx.app/me"
+          placeholder={`${publicSiteUrl}/me`}
         />
 
         <FieldLabel label="Bio" helper="Tell people who you are becoming." />
@@ -1212,6 +1337,84 @@ function SettingsScreen({
           onSelect={(corners) => ui.setPreferences((current) => ({ ...current, corners }))}
         />
 
+        <FieldLabel label="Transition Style" helper="Visual motion between major tab surfaces." />
+        <SelectionRow<UiTransitionStyle>
+          items={[
+            { key: "slide", label: "Slide" },
+            { key: "fade", label: "Fade" },
+            { key: "zoom", label: "Zoom" }
+          ]}
+          value={ui.preferences.transitionStyle}
+          onSelect={(transitionStyle) => ui.setPreferences((current) => ({ ...current, transitionStyle }))}
+        />
+
+        <FieldLabel label="Transition Speed" helper="How fast transitions and reactions should feel." />
+        <SelectionRow<UiTransitionSpeed>
+          items={[
+            { key: "calm", label: "Calm" },
+            { key: "balanced", label: "Balanced" },
+            { key: "snappy", label: "Snappy" }
+          ]}
+          value={ui.preferences.transitionSpeed}
+          onSelect={(transitionSpeed) =>
+            ui.setPreferences((current) => ({ ...current, transitionSpeed }))
+          }
+        />
+
+        <FieldLabel label="Action Intensity" helper="Tap and interaction response weight." />
+        <SelectionRow<UiActionStyle>
+          items={[
+            { key: "subtle", label: "Subtle" },
+            { key: "balanced", label: "Balanced" },
+            { key: "bold", label: "Bold" }
+          ]}
+          value={ui.preferences.actionStyle}
+          onSelect={(actionStyle) => ui.setPreferences((current) => ({ ...current, actionStyle }))}
+        />
+
+        <FieldLabel label="Action Sounds" helper="Enable audible feedback for taps and button actions." />
+        <ToggleRow
+          label={ui.preferences.soundEnabled ? "Sound On" : "Sound Off"}
+          description={ui.preferences.soundEnabled ? "UI taps will play your selected sound pack." : "Silent interactions."}
+          value={ui.preferences.soundEnabled}
+          onValueChange={(soundEnabled) => ui.setPreferences((current) => ({ ...current, soundEnabled }))}
+        />
+
+        <FieldLabel label="Sound Pack" helper="Pick the tonal personality for interaction sounds." />
+        <SelectionRow<UiSoundPack>
+          items={[
+            { key: "soft", label: "Soft" },
+            { key: "tech", label: "Tech" },
+            { key: "cosmic", label: "Cosmic" }
+          ]}
+          value={ui.preferences.soundPack}
+          onSelect={(soundPack) => ui.setPreferences((current) => ({ ...current, soundPack }))}
+        />
+
+        <FieldLabel label="Sound Volume" helper="Output level for UI interaction sounds." />
+        <SelectionRow<"low" | "mid" | "high">
+          items={[
+            { key: "low", label: "Low" },
+            { key: "mid", label: "Mid" },
+            { key: "high", label: "High" }
+          ]}
+          value={ui.preferences.soundVolume <= 0.3 ? "low" : ui.preferences.soundVolume <= 0.55 ? "mid" : "high"}
+          onSelect={(level) =>
+            ui.setPreferences((current) => ({
+              ...current,
+              soundVolume: level === "low" ? 0.25 : level === "mid" ? 0.45 : 0.7
+            }))
+          }
+        />
+
+        <TouchableOpacity
+          style={[styles.secondaryButton, { marginTop: spacing.sm, borderColor: ui.primaryColor }]}
+          activeOpacity={ui.actionOpacity}
+          onPress={() => ui.playUiAction()}
+        >
+          <Text style={styles.secondaryButtonText}>Preview Action Sound</Text>
+        </TouchableOpacity>
+
         <FieldLabel label="Realm Blend" helper="Let environments hand off context between connected realms." />
         <ToggleRow
           label={ui.blendEnabled ? "Blend Enabled" : "Blend Disabled"}
@@ -1287,7 +1490,11 @@ function PrimaryButton({ label, onPress }: { label: string; onPress: () => void 
           borderRadius: Math.round(radius.md * ui.cornerScale)
         }
       ]}
-      onPress={onPress}
+      activeOpacity={ui.actionOpacity}
+      onPress={() => {
+        ui.playUiAction();
+        onPress();
+      }}
     >
       <Text style={[styles.primaryButtonText, { fontSize: 15 * ui.scale }]}>{label}</Text>
     </TouchableOpacity>
@@ -1304,8 +1511,17 @@ function MetricCard({ label, value }: { label: string; value: string }) {
 }
 
 function LaunchButton({ label, hint, onPress }: { label: string; hint: string; onPress: () => void }) {
+  const ui = useUiRuntime();
+
   return (
-    <TouchableOpacity style={styles.launchButton} onPress={onPress}>
+    <TouchableOpacity
+      style={styles.launchButton}
+      activeOpacity={ui.actionOpacity}
+      onPress={() => {
+        ui.playUiAction();
+        onPress();
+      }}
+    >
       <Text style={styles.launchLabel}>{label}</Text>
       <Text style={styles.launchHint}>{hint}</Text>
     </TouchableOpacity>
@@ -1388,7 +1604,11 @@ function RealmChipRow({
         return (
           <TouchableOpacity
             key={realm.key}
-            onPress={() => onSelect(realm.key)}
+            onPress={() => {
+              ui.playUiAction();
+              onSelect(realm.key);
+            }}
+            activeOpacity={ui.actionOpacity}
             style={[
               styles.realmChip,
               active && styles.realmChipActive,
@@ -1425,7 +1645,11 @@ function MoodRow({
         return (
           <TouchableOpacity
             key={mood}
-            onPress={() => onSelect(mood)}
+            onPress={() => {
+              ui.playUiAction();
+              onSelect(mood);
+            }}
+            activeOpacity={ui.actionOpacity}
             style={[
               styles.moodChip,
               active && styles.moodChipActive,
@@ -1459,7 +1683,11 @@ function SelectionRow<T extends string>({
         return (
           <TouchableOpacity
             key={item.key}
-            onPress={() => onSelect(item.key)}
+            onPress={() => {
+              ui.playUiAction();
+              onSelect(item.key);
+            }}
+            activeOpacity={ui.actionOpacity}
             style={[
               styles.realmChip,
               active && { backgroundColor: ui.primaryColor, borderColor: ui.glowColor }
@@ -1593,6 +1821,13 @@ const styles = StyleSheet.create({
     color: colors.crimsonGlow,
     fontWeight: "900",
     letterSpacing: 8
+  },
+  logoImage: {
+    width: 148,
+    height: 148,
+    borderRadius: 36,
+    borderWidth: 2,
+    marginBottom: spacing.sm
   },
   title: {
     color: colors.boneWhite,

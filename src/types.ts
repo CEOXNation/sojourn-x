@@ -40,12 +40,26 @@ export type UiDensity = "cozy" | "balanced" | "dense";
 
 export type UiCorners = "soft" | "balanced" | "sharp";
 
+export type UiTransitionStyle = "fade" | "slide" | "zoom";
+
+export type UiTransitionSpeed = "calm" | "balanced" | "snappy";
+
+export type UiActionStyle = "subtle" | "balanced" | "bold";
+
+export type UiSoundPack = "soft" | "tech" | "cosmic";
+
 export type UiPreferences = {
   accent: UiAccent;
   style: UiStylePreset;
   scale: UiScale;
   density: UiDensity;
   corners: UiCorners;
+  transitionStyle: UiTransitionStyle;
+  transitionSpeed: UiTransitionSpeed;
+  actionStyle: UiActionStyle;
+  soundEnabled: boolean;
+  soundPack: UiSoundPack;
+  soundVolume: number;
 };
 
 export type NavTab = BetaTab;
