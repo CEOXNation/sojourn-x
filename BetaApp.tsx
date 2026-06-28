@@ -1,4 +1,3 @@
-import AsyncStorage from "@react-native-async-storage/async-storage";
 import { Audio } from "expo-av";
 import React, { useEffect, useMemo, useState } from "react";
 import {
