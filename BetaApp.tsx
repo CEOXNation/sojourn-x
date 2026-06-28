@@ -6,6 +6,7 @@ import {
   Easing,
   Image,
   ActivityIndicator,
+  Platform,
   SafeAreaView,
   ScrollView,
   StatusBar,
@@ -40,6 +41,7 @@ import {
   saveSyncedContacts
 } from "./src/storage";
 import { colors, radius, shadow, spacing } from "./src/theme";
+import { Analytics } from "@vercel/analytics/react";
 import type {
   BetaProfile,
   BetaTab,
@@ -656,7 +658,12 @@ export default function BetaApp() {
     );
   }
 
-  return <UiRuntimeContext.Provider value={uiRuntime}>{content}</UiRuntimeContext.Provider>;
+  return (
+    <UiRuntimeContext.Provider value={uiRuntime}>
+      {content}
+      {Platform.OS === "web" && <Analytics />}
+    </UiRuntimeContext.Provider>
+  );
 }
 
 function AgeGate({ onEnter }: { onEnter: () => void }) {
