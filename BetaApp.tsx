@@ -15,6 +15,7 @@ import {
   TouchableOpacity,
   View
 } from "react-native";
+import { Analytics } from "@vercel/analytics/react";
 
 import {
   betaAvatarOptions,
@@ -571,7 +572,12 @@ export default function BetaApp() {
     );
   }
 
-  return <UiRuntimeContext.Provider value={uiRuntime}>{content}</UiRuntimeContext.Provider>;
+  return (
+    <UiRuntimeContext.Provider value={uiRuntime}>
+      {content}
+      <Analytics />
+    </UiRuntimeContext.Provider>
+  );
 }
 
 function AgeGate({ onEnter }: { onEnter: () => void }) {
