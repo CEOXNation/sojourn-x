@@ -1,25 +1,31 @@
 {
-  "name": "sojourn-x",
+  "name": "sojournx",
+  "version": "0.1.0",
   "private": true,
-  "version": "0.0.0",
-  "type": "module",
+  "main": "index.js",
   "scripts": {
-    "dev": "vite",
-    "build": "vite build",
-    "lint": "oxlint",
-    "preview": "vite preview"
+    "start": "expo start",
+    "start:clean": "expo start -c",
+    "android": "expo start --android",
+    "ios": "expo start --ios",
+    "web": "expo start --web",
+    "typecheck": "tsc --noEmit",
+    "doctor": "npx expo-doctor",
+    "audit:realms": "node scripts/realm-audit.mjs",
+    "governance:init": "node scripts/bootstrap-governance.mjs",
+    "release:check": "node scripts/release-readiness.mjs --strict",
+    "preflight": "npm run typecheck && npm run audit:realms && npm run release:check",
+    "vault:ready": "npm run governance:init && npm run preflight"
   },
   "dependencies": {
-    "framer-motion": "^12.42.0",
-    "lucide-react": "^1.21.0",
-    "react": "^19.2.7",
-    "react-dom": "^19.2.7"
+    "expo": "latest",
+    "expo-status-bar": "latest",
+    "react": "19.2.3",
+    "react-native": "0.85.3",
+    "react-native-safe-area-context": "~5.7.0"
   },
   "devDependencies": {
-    "@types/react": "^19.2.17",
-    "@types/react-dom": "^19.2.3",
-    "@vitejs/plugin-react": "^6.0.2",
-    "oxlint": "^1.69.0",
-    "vite": "^8.1.0"
+    "@types/react": "latest",
+    "typescript": "latest"
   }
 }

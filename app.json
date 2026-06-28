@@ -1,0 +1,25 @@
+{
+  "expo": {
+    "name": "SojournX",
+    "slug": "sojournx",
+    "version": "0.1.0",
+    "orientation": "portrait",
+    "userInterfaceStyle": "dark",
+    "assetBundlePatterns": [
+      "**/*"
+    ],
+    "ios": {
+      "supportsTablet": true,
+      "bundleIdentifier": "com.sojournx.app"
+    },
+    "android": {
+      "package": "com.sojournx.app",
+      "adaptiveIcon": {
+        "backgroundColor": "#050505"
+      }
+    },
+    "web": {
+      "bundler": "metro"
+    }
+  }
+}
