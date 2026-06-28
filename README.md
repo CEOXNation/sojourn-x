@@ -116,6 +116,8 @@ Then open with Expo Go, Android emulator, iOS simulator, or web depending on you
 
 The web deploy target is configured for Vercel static export and the production domain is [sojournx.xyz](https://sojournx.xyz).
 
+The Vercel config also redirects `www.sojournx.xyz` to the apex domain so the deployed site stays canonical.
+
 Build locally with:
 
 ```bash

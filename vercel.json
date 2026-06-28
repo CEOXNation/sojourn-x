@@ -1,4 +1,17 @@
 {
+  "redirects": [
+    {
+      "source": "/:path*",
+      "has": [
+        {
+          "type": "host",
+          "value": "www.sojournx.xyz"
+        }
+      ],
+      "destination": "https://sojournx.xyz/:path*",
+      "permanent": true
+    }
+  ],
   "buildCommand": "npm run build",
   "outputDirectory": "dist",
   "framework": null
