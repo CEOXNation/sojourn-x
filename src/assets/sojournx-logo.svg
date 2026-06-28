@@ -1,0 +1,82 @@
+<svg width="1024" height="1024" viewBox="0 0 1024 1024" fill="none" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="SojournX logo">
+  <defs>
+    <linearGradient id="bgGrad" x1="128" y1="128" x2="896" y2="896" gradientUnits="userSpaceOnUse">
+      <stop offset="0" stop-color="#05060B"/>
+      <stop offset="0.55" stop-color="#06070D"/>
+      <stop offset="1" stop-color="#020207"/>
+    </linearGradient>
+
+    <radialGradient id="coreGlow" cx="0" cy="0" r="1" gradientUnits="userSpaceOnUse" gradientTransform="translate(512 512) rotate(90) scale(340)">
+      <stop offset="0" stop-color="#FF2B2B" stop-opacity="0.28"/>
+      <stop offset="1" stop-color="#FF2B2B" stop-opacity="0"/>
+    </radialGradient>
+
+    <linearGradient id="xRed" x1="312" y1="732" x2="730" y2="312" gradientUnits="userSpaceOnUse">
+      <stop offset="0" stop-color="#B50000"/>
+      <stop offset="0.35" stop-color="#FF1B1B"/>
+      <stop offset="0.7" stop-color="#FF3D2A"/>
+      <stop offset="1" stop-color="#C80A00"/>
+    </linearGradient>
+
+    <linearGradient id="xEdge" x1="270" y1="760" x2="760" y2="270" gradientUnits="userSpaceOnUse">
+      <stop offset="0" stop-color="#FF572E"/>
+      <stop offset="1" stop-color="#FFD6D6"/>
+    </linearGradient>
+
+    <filter id="softGlow" x="80" y="80" width="864" height="864" filterUnits="userSpaceOnUse" color-interpolation-filters="sRGB">
+      <feGaussianBlur stdDeviation="18"/>
+    </filter>
+
+    <filter id="xGlow" x="120" y="120" width="784" height="784" filterUnits="userSpaceOnUse" color-interpolation-filters="sRGB">
+      <feDropShadow dx="0" dy="0" stdDeviation="14" flood-color="#FF1414" flood-opacity="0.95"/>
+      <feDropShadow dx="0" dy="0" stdDeviation="34" flood-color="#FF1414" flood-opacity="0.4"/>
+    </filter>
+
+    <clipPath id="logoClip">
+      <rect x="128" y="128" width="768" height="768" rx="132"/>
+    </clipPath>
+  </defs>
+
+  <rect width="1024" height="1024" fill="#F3F3F3"/>
+
+  <g clip-path="url(#logoClip)">
+    <rect x="128" y="128" width="768" height="768" rx="132" fill="url(#bgGrad)"/>
+    <rect x="132" y="132" width="760" height="760" rx="128" stroke="#2A2D42" stroke-opacity="0.6" stroke-width="4"/>
+
+    <g opacity="0.75" filter="url(#softGlow)">
+      <circle cx="512" cy="512" r="272" stroke="#FF1E1E" stroke-width="8"/>
+      <circle cx="512" cy="512" r="220" stroke="#FF1E1E" stroke-width="6" stroke-opacity="0.75"/>
+    </g>
+
+    <circle cx="512" cy="512" r="300" stroke="#FF2020" stroke-opacity="0.35" stroke-width="3" stroke-dasharray="16 18"/>
+    <circle cx="512" cy="512" r="188" stroke="#FF2020" stroke-opacity="0.3" stroke-width="2" stroke-dasharray="8 12"/>
+
+    <rect x="172" y="505" width="680" height="10" rx="5" fill="#FF2424" fill-opacity="0.65"/>
+    <circle cx="512" cy="512" r="340" fill="url(#coreGlow)"/>
+
+    <g fill="#FF1C1C" fill-opacity="0.75">
+      <circle cx="240" cy="620" r="4"/>
+      <circle cx="286" cy="412" r="3"/>
+      <circle cx="348" cy="698" r="4"/>
+      <circle cx="676" cy="344" r="3"/>
+      <circle cx="744" cy="612" r="4"/>
+      <circle cx="598" cy="748" r="3"/>
+      <circle cx="812" cy="478" r="5"/>
+      <circle cx="210" cy="480" r="5"/>
+    </g>
+
+    <g filter="url(#xGlow)">
+      <path d="M206 714L662 258H794L338 714H206Z" fill="url(#xRed)"/>
+      <path d="M242 302H374L770 698H638L242 302Z" fill="url(#xRed)"/>
+
+      <path d="M232 700L674 258" stroke="url(#xEdge)" stroke-width="10" stroke-linecap="round" stroke-opacity="0.9"/>
+      <path d="M266 318L650 684" stroke="url(#xEdge)" stroke-width="9" stroke-linecap="round" stroke-opacity="0.75"/>
+
+      <path d="M336 300L512 502L460 554L286 346L336 300Z" fill="#FF6A4A" fill-opacity="0.18"/>
+      <path d="M650 724L508 560L554 516L700 688L650 724Z" fill="#FFDCDC" fill-opacity="0.22"/>
+    </g>
+
+    <path d="M200 820C278 760 350 740 512 740C674 740 746 760 824 820" stroke="#FF1E1E" stroke-opacity="0.45" stroke-width="6"/>
+    <path d="M200 204C278 264 350 284 512 284C674 284 746 264 824 204" stroke="#FF1E1E" stroke-opacity="0.35" stroke-width="5"/>
+  </g>
+</svg>

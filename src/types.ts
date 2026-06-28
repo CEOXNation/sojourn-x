@@ -16,6 +16,32 @@ export type Realm = {
   features: string[];
 };
 
+export type RealmEnvironmentModule = {
+  name: string;
+  description: string;
+  capabilities: string[];
+};
+
+export type RealmEnvironment = {
+  realmKey: RealmKey;
+  mission: string;
+  atmosphere: string;
+  modules: RealmEnvironmentModule[];
+  blendTargets: RealmKey[];
+};
+
+export type UiAccent = "crimson" | "sunset" | "emerald" | "electric" | "amber";
+
+export type UiStylePreset = "vault" | "glass" | "mono";
+
+export type UiScale = "compact" | "balanced" | "immersive";
+
+export type UiPreferences = {
+  accent: UiAccent;
+  style: UiStylePreset;
+  scale: UiScale;
+};
+
 export type NavTab = BetaTab;
 
 export type BetaTab = "Home" | "Pulse" | "Realms" | "Journal" | "Settings";

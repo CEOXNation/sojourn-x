@@ -67,7 +67,10 @@ The active app entrypoint now launches the first true SojournX beta with:
 - Local-only age gate and vault setup
 - Persistent profile, pulse feed, and journal storage on device
 - Realm switching with a home realm selector
+- Full per-realm environment modules (mission, atmosphere, capabilities, and blend targets)
+- Seamless blend mode toggle for cross-realm environment handoff behavior
 - Private mode toggle for anonymized pulse posting
+- Customizable UI engine with accent color, interface style, and UI size presets
 - Live feed and growth journal interactions
 - Resettable beta vault state for testing
 

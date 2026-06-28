@@ -14,15 +14,29 @@ import {
 } from "react-native";
 
 import { betaChecklist, betaJournalSeed, betaMoods, betaPulseSeed, betaRealmPreviewOrder, betaTabs } from "./src/data/beta";
-import { realms } from "./src/data/realms";
+import { realmEnvironments, realms } from "./src/data/realms";
 import { clearKeys, createId, loadJson, saveJson } from "./src/storage";
 import { colors, radius, shadow, spacing } from "./src/theme";
-import type { BetaProfile, BetaTab, JournalEntry, PulsePost, Realm, RealmKey } from "./src/types";
+import type {
+  BetaProfile,
+  BetaTab,
+  JournalEntry,
+  PulsePost,
+  Realm,
+  RealmEnvironment,
+  RealmKey,
+  UiAccent,
+  UiPreferences,
+  UiScale,
+  UiStylePreset
+} from "./src/types";
 
 const STORAGE_KEYS = {
   profile: "sojournx.beta.profile",
   pulses: "sojournx.beta.pulses",
-  journal: "sojournx.beta.journal"
+  journal: "sojournx.beta.journal",
+  ui: "sojournx.beta.ui",
+  blend: "sojournx.beta.blend"
 } as const;
 
 const defaultProfile: BetaProfile = {
@@ -36,6 +50,56 @@ const defaultProfile: BetaProfile = {
 
 const defaultPulseMood = betaMoods[0];
 
+const defaultUiPreferences: UiPreferences = {
+  accent: "crimson",
+  style: "vault",
+  scale: "balanced"
+};
+
+const accentPalette: Record<UiAccent, { primary: string; glow: string }> = {
+  crimson: { primary: "#B00020", glow: "#FF1744" },
+  sunset: { primary: "#D9480F", glow: "#FF7A45" },
+  emerald: { primary: "#0E9F6E", glow: "#34D399" },
+  electric: { primary: "#2563EB", glow: "#60A5FA" },
+  amber: { primary: "#B45309", glow: "#F59E0B" }
+};
+
+const scaleMap: Record<UiScale, number> = {
+  compact: 0.9,
+  balanced: 1,
+  immersive: 1.12
+};
+
+type UiRuntime = {
+  preferences: UiPreferences;
+  setPreferences: React.Dispatch<React.SetStateAction<UiPreferences>>;
+  blendEnabled: boolean;
+  setBlendEnabled: React.Dispatch<React.SetStateAction<boolean>>;
+  primaryColor: string;
+  glowColor: string;
+  scale: number;
+};
+
+const UiRuntimeContext = React.createContext<UiRuntime | null>(null);
+
+function useUiRuntime(): UiRuntime {
+  const value = React.useContext(UiRuntimeContext);
+
+  if (!value) {
+    return {
+      preferences: defaultUiPreferences,
+      setPreferences: () => undefined,
+      blendEnabled: true,
+      setBlendEnabled: () => undefined,
+      primaryColor: accentPalette.crimson.primary,
+      glowColor: accentPalette.crimson.glow,
+      scale: 1
+    };
+  }
+
+  return value;
+}
+
 export default function BetaApp() {
   const [ageConfirmed, setAgeConfirmed] = useState(false);
   const [hydrated, setHydrated] = useState(false);
@@ -43,6 +107,8 @@ export default function BetaApp() {
   const [profile, setProfile] = useState<BetaProfile>(defaultProfile);
   const [posts, setPosts] = useState<PulsePost[]>(betaPulseSeed);
   const [journalEntries, setJournalEntries] = useState<JournalEntry[]>(betaJournalSeed);
+  const [uiPreferences, setUiPreferences] = useState<UiPreferences>(defaultUiPreferences);
+  const [blendEnabled, setBlendEnabled] = useState(true);
   const [selectedRealmKey, setSelectedRealmKey] = useState<RealmKey>(defaultProfile.homeRealm);
   const [pulseBody, setPulseBody] = useState("");
   const [pulseMood, setPulseMood] = useState(defaultPulseMood);
@@ -54,10 +120,12 @@ export default function BetaApp() {
     let cancelled = false;
 
     const loadState = async () => {
-      const [storedProfile, storedPosts, storedJournal] = await Promise.all([
+      const [storedProfile, storedPosts, storedJournal, storedUi, storedBlend] = await Promise.all([
         loadJson<BetaProfile | null>(STORAGE_KEYS.profile, null),
         loadJson<PulsePost[] | null>(STORAGE_KEYS.pulses, null),
-        loadJson<JournalEntry[] | null>(STORAGE_KEYS.journal, null)
+        loadJson<JournalEntry[] | null>(STORAGE_KEYS.journal, null),
+        loadJson<UiPreferences | null>(STORAGE_KEYS.ui, null),
+        loadJson<boolean | null>(STORAGE_KEYS.blend, null)
       ]);
 
       if (cancelled) {
@@ -78,6 +146,14 @@ export default function BetaApp() {
         setJournalEntries(storedJournal);
       }
 
+      if (storedUi) {
+        setUiPreferences({ ...defaultUiPreferences, ...storedUi });
+      }
+
+      if (typeof storedBlend === "boolean") {
+        setBlendEnabled(storedBlend);
+      }
+
       setHydrated(true);
     };
 
@@ -96,9 +172,11 @@ export default function BetaApp() {
     void Promise.all([
       saveJson(STORAGE_KEYS.profile, profile),
       saveJson(STORAGE_KEYS.pulses, posts),
-      saveJson(STORAGE_KEYS.journal, journalEntries)
+      saveJson(STORAGE_KEYS.journal, journalEntries),
+      saveJson(STORAGE_KEYS.ui, uiPreferences),
+      saveJson(STORAGE_KEYS.blend, blendEnabled)
     ]);
-  }, [hydrated, profile, posts, journalEntries]);
+  }, [hydrated, profile, posts, journalEntries, uiPreferences, blendEnabled]);
 
   useEffect(() => {
     setPulseRealmKey(profile.homeRealm);
@@ -115,6 +193,23 @@ export default function BetaApp() {
     [profile.homeRealm]
   );
 
+  const primaryColor = accentPalette[uiPreferences.accent].primary;
+  const glowColor = accentPalette[uiPreferences.accent].glow;
+  const uiScale = scaleMap[uiPreferences.scale];
+
+  const uiRuntime = useMemo(
+    () => ({
+      preferences: uiPreferences,
+      setPreferences: setUiPreferences,
+      blendEnabled,
+      setBlendEnabled,
+      primaryColor,
+      glowColor,
+      scale: uiScale
+    }),
+    [uiPreferences, blendEnabled, primaryColor, glowColor, uiScale]
+  );
+
   const betaMetrics = useMemo(
     () => [
       { label: "Vault Status", value: ageConfirmed ? "Open" : "Locked" },
@@ -125,43 +220,43 @@ export default function BetaApp() {
     [ageConfirmed, journalEntries.length, posts.length, profile.privateMode]
   );
 
+  let content: React.ReactNode;
+
   if (!ageConfirmed) {
-    return <AgeGate onEnter={() => setAgeConfirmed(true)} />;
-  }
-
-  if (!hydrated) {
-    return <LoadingVault />;
-  }
-
-  if (!profile.onboardingComplete) {
-    return (
+    content = <AgeGate onEnter={() => setAgeConfirmed(true)} />;
+  } else if (!hydrated) {
+    content = <LoadingVault />;
+  } else if (!profile.onboardingComplete) {
+    content = (
       <BetaSetup
         profile={profile}
         setProfile={setProfile}
         onContinue={() => setProfile((current) => ({ ...current, onboardingComplete: true }))}
       />
     );
-  }
+  } else {
+    content = (
+      <SafeAreaView style={[styles.safe, { backgroundColor: colors.vaultBlack }]}>
+        <StatusBar barStyle="light-content" />
 
-  return (
-    <SafeAreaView style={styles.safe}>
-      <StatusBar barStyle="light-content" />
+        <View style={styles.appShell}>
+          <Header profile={profile} />
+          <Nav activeTab={activeTab} setActiveTab={setActiveTab} />
 
-      <View style={styles.appShell}>
-        <Header profile={profile} />
-        <Nav activeTab={activeTab} setActiveTab={setActiveTab} />
-
-        <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={styles.content}>
-          {activeTab === "Home" && (
-            <HomeScreen
-              profile={profile}
-              betaMetrics={betaMetrics}
-              homeRealm={homeRealm}
-              posts={posts}
-              journalEntries={journalEntries}
-              onJump={(tab) => setActiveTab(tab)}
-            />
-          )}
+          <ScrollView
+            showsVerticalScrollIndicator={false}
+            contentContainerStyle={[styles.content, { padding: Math.round(spacing.md * uiScale) }]}
+          >
+            {activeTab === "Home" && (
+              <HomeScreen
+                profile={profile}
+                betaMetrics={betaMetrics}
+                homeRealm={homeRealm}
+                posts={posts}
+                journalEntries={journalEntries}
+                onJump={(tab) => setActiveTab(tab)}
+              />
+            )}
 
           {activeTab === "Pulse" && (
             <PulseScreen
@@ -197,14 +292,15 @@ export default function BetaApp() {
             />
           )}
 
-          {activeTab === "Realms" && (
-            <RealmsScreen
-              profile={profile}
-              selectedRealm={selectedRealm}
-              setSelectedRealmKey={setSelectedRealmKey}
-              onMakeHome={(realmKey) => setProfile((current) => ({ ...current, homeRealm: realmKey }))}
-            />
-          )}
+            {activeTab === "Realms" && (
+              <RealmsScreen
+                profile={profile}
+                selectedRealm={selectedRealm}
+                environment={realmEnvironments[selectedRealm.key]}
+                setSelectedRealmKey={setSelectedRealmKey}
+                onMakeHome={(realmKey) => setProfile((current) => ({ ...current, homeRealm: realmKey }))}
+              />
+            )}
 
           {activeTab === "Journal" && (
             <JournalScreen
@@ -234,11 +330,11 @@ export default function BetaApp() {
             />
           )}
 
-          {activeTab === "Settings" && (
-            <SettingsScreen
-              profile={profile}
-              setProfile={setProfile}
-              onReset={() => {
+            {activeTab === "Settings" && (
+              <SettingsScreen
+                profile={profile}
+                setProfile={setProfile}
+                onReset={() => {
                 Alert.alert(
                   "Reset local vault?",
                   "This clears the beta profile, pulse feed, and journal from this device.",
@@ -248,10 +344,18 @@ export default function BetaApp() {
                       text: "Reset",
                       style: "destructive",
                       onPress: async () => {
-                        await clearKeys([STORAGE_KEYS.profile, STORAGE_KEYS.pulses, STORAGE_KEYS.journal]);
+                        await clearKeys([
+                          STORAGE_KEYS.profile,
+                          STORAGE_KEYS.pulses,
+                          STORAGE_KEYS.journal,
+                          STORAGE_KEYS.ui,
+                          STORAGE_KEYS.blend
+                        ]);
                         setProfile(defaultProfile);
                         setPosts(betaPulseSeed);
                         setJournalEntries(betaJournalSeed);
+                        setUiPreferences(defaultUiPreferences);
+                        setBlendEnabled(true);
                         setActiveTab("Home");
                         setSelectedRealmKey(defaultProfile.homeRealm);
                         setPulseRealmKey(defaultProfile.homeRealm);
@@ -264,22 +368,27 @@ export default function BetaApp() {
                       }
                     }
                   ]
-                );
-              }}
-            />
-          )}
-        </ScrollView>
-      </View>
-    </SafeAreaView>
-  );
+                  );
+                }}
+              />
+            )}
+          </ScrollView>
+        </View>
+      </SafeAreaView>
+    );
+  }
+
+  return <UiRuntimeContext.Provider value={uiRuntime}>{content}</UiRuntimeContext.Provider>;
 }
 
 function AgeGate({ onEnter }: { onEnter: () => void }) {
+  const ui = useUiRuntime();
+
   return (
-    <SafeAreaView style={styles.safe}>
+    <SafeAreaView style={[styles.safe, { backgroundColor: colors.vaultBlack }]}>
       <View style={styles.ageGate}>
-        <View style={styles.glowOrb} />
-        <Text style={styles.logoMark}>X</Text>
+        <View style={[styles.glowOrb, { backgroundColor: ui.primaryColor }]} />
+        <Text style={[styles.logoMark, { color: ui.glowColor }]}>X</Text>
         <Text style={styles.title}>SojournX Beta</Text>
         <Text style={styles.tagline}>Every version of you has a realm.</Text>
 
@@ -293,9 +402,7 @@ function AgeGate({ onEnter }: { onEnter: () => void }) {
             By entering, you confirm that you are 18+ and agree to use the platform respectfully.
           </Text>
 
-          <TouchableOpacity style={styles.primaryButton} onPress={onEnter}>
-            <Text style={styles.primaryButtonText}>I am 18+ - Enter SojournX</Text>
-          </TouchableOpacity>
+          <PrimaryButton label="I am 18+ - Enter SojournX" onPress={onEnter} />
         </View>
 
         <Text style={styles.footerNote}>
@@ -308,7 +415,7 @@ function AgeGate({ onEnter }: { onEnter: () => void }) {
 
 function LoadingVault() {
   return (
-    <SafeAreaView style={styles.safe}>
+    <SafeAreaView style={[styles.safe, { backgroundColor: colors.vaultBlack }]}>
       <View style={styles.loadingWrap}>
         <Text style={styles.loadingKicker}>VAULT BOOTING</Text>
         <Text style={styles.loadingTitle}>Loading your beta state...</Text>
@@ -326,12 +433,17 @@ function BetaSetup({
   setProfile: React.Dispatch<React.SetStateAction<BetaProfile>>;
   onContinue: () => void;
 }) {
+  const ui = useUiRuntime();
+
   return (
-    <SafeAreaView style={styles.safe}>
+    <SafeAreaView style={[styles.safe, { backgroundColor: colors.vaultBlack }]}>
       <StatusBar barStyle="light-content" />
 
-      <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={styles.content}>
-        <View style={[styles.heroCard, shadow]}>
+      <ScrollView
+        showsVerticalScrollIndicator={false}
+        contentContainerStyle={[styles.content, { padding: Math.round(spacing.md * ui.scale) }]}
+      >
+        <View style={[styles.heroCard, shadow, { borderColor: ui.primaryColor }]}> 
           <Text style={styles.heroEyebrow}>BETA SETUP</Text>
           <Text style={styles.heroTitle}>Shape the first true vault identity.</Text>
           <Text style={styles.heroBody}>
@@ -380,15 +492,15 @@ function BetaSetup({
           />
         </ContentCard>
 
-        <TouchableOpacity style={styles.primaryButton} onPress={onContinue}>
-          <Text style={styles.primaryButtonText}>Enter Beta Vault</Text>
-        </TouchableOpacity>
+        <PrimaryButton label="Enter Beta Vault" onPress={onContinue} />
       </ScrollView>
     </SafeAreaView>
   );
 }
 
 function Header({ profile }: { profile: BetaProfile }) {
+  const ui = useUiRuntime();
+
   return (
     <View style={styles.header}>
       <View>
@@ -396,7 +508,7 @@ function Header({ profile }: { profile: BetaProfile }) {
         <Text style={styles.headerSub}>Local-first multi-realm identity platform</Text>
       </View>
 
-      <View style={styles.vaultBadge}>
+      <View style={[styles.vaultBadge, { borderColor: ui.glowColor, backgroundColor: ui.primaryColor }]}> 
         <Text style={styles.vaultBadgeText}>{profile.privateMode ? "PRIVATE" : "OPEN"}</Text>
       </View>
     </View>
@@ -410,6 +522,8 @@ function Nav({
   activeTab: BetaTab;
   setActiveTab: (tab: BetaTab) => void;
 }) {
+  const ui = useUiRuntime();
+
   return (
     <View style={styles.nav}>
       {betaTabs.map((tab) => {
@@ -419,7 +533,11 @@ function Nav({
           <TouchableOpacity
             key={tab}
             onPress={() => setActiveTab(tab)}
-            style={[styles.navItem, active && styles.navItemActive]}
+            style={[
+              styles.navItem,
+              active && styles.navItemActive,
+              active && { backgroundColor: ui.primaryColor, borderColor: ui.glowColor }
+            ]}
           >
             <Text style={[styles.navText, active && styles.navTextActive]}>{tab}</Text>
           </TouchableOpacity>
@@ -551,9 +669,7 @@ function PulseScreen({
           realmsToShow={betaRealmPreviewOrder}
         />
 
-        <TouchableOpacity style={styles.primaryButton} onPress={onPublish}>
-          <Text style={styles.primaryButtonText}>Broadcast to Vault</Text>
-        </TouchableOpacity>
+        <PrimaryButton label="Broadcast to Vault" onPress={onPublish} />
 
         <Text style={styles.helperNote}>
           {profile.privateMode ? "Your handle stays hidden." : `Posting as ${profile.handle || "Vault member"}.`}
@@ -572,14 +688,18 @@ function PulseScreen({
 function RealmsScreen({
   profile,
   selectedRealm,
+  environment,
   setSelectedRealmKey,
   onMakeHome
 }: {
   profile: BetaProfile;
   selectedRealm: Realm;
+  environment: RealmEnvironment;
   setSelectedRealmKey: React.Dispatch<React.SetStateAction<RealmKey>>;
   onMakeHome: (realmKey: RealmKey) => void;
 }) {
+  const ui = useUiRuntime();
+
   return (
     <View>
       <SectionTitle title="The SojournX Realms" subtitle="Each realm is a different mode of being." />
@@ -592,9 +712,13 @@ function RealmsScreen({
             <TouchableOpacity
               key={realm.key}
               onPress={() => setSelectedRealmKey(realm.key)}
-              style={[styles.realmChip, active && styles.realmChipActive]}
+              style={[
+                styles.realmChip,
+                active && styles.realmChipActive,
+                active && { backgroundColor: ui.primaryColor, borderColor: ui.glowColor }
+              ]}
             >
-              <Text style={styles.realmIcon}>{realm.icon}</Text>
+              <Text style={[styles.realmIcon, { color: ui.glowColor }]}>{realm.icon}</Text>
               <Text style={[styles.realmChipText, active && styles.realmChipTextActive]}>
                 {realm.shortTitle}
               </Text>
@@ -603,11 +727,58 @@ function RealmsScreen({
         })}
       </ScrollView>
 
-      <View style={[styles.realmDetail, shadow]}>
-        <Text style={styles.realmDetailIcon}>{selectedRealm.icon}</Text>
+      <View style={[styles.realmDetail, shadow, { borderColor: ui.primaryColor }]}> 
+        <Text style={[styles.realmDetailIcon, { color: ui.glowColor }]}>{selectedRealm.icon}</Text>
         <Text style={styles.realmDetailTitle}>{selectedRealm.title}</Text>
-        <Text style={styles.realmPromise}>{selectedRealm.promise}</Text>
+        <Text style={[styles.realmPromise, { color: ui.glowColor }]}>{selectedRealm.promise}</Text>
         <Text style={styles.bodyText}>{selectedRealm.description}</Text>
+
+        <ContentCard>
+          <Text style={styles.cardKicker}>ENVIRONMENT MISSION</Text>
+          <Text style={styles.cardTitle}>{environment.mission}</Text>
+          <Text style={styles.bodyText}>{environment.atmosphere}</Text>
+        </ContentCard>
+
+        <SectionTitle
+          title="Environment Modules"
+          subtitle="Each realm ships with a complete operating environment, not just a single feed."
+        />
+
+        {environment.modules.map((module) => (
+          <ContentCard key={module.name}>
+            <Text style={styles.cardKicker}>MODULE</Text>
+            <Text style={styles.cardTitle}>{module.name}</Text>
+            <Text style={styles.bodyText}>{module.description}</Text>
+            <View style={styles.featureList}>
+              {module.capabilities.map((capability) => (
+                <View key={capability} style={styles.featureRow}>
+                  <Text style={[styles.featureBullet, { color: ui.glowColor }]}>◆</Text>
+                  <Text style={styles.featureText}>{capability}</Text>
+                </View>
+              ))}
+            </View>
+          </ContentCard>
+        ))}
+
+        <ContentCard>
+          <Text style={styles.cardKicker}>SEAMLESS BLEND PATHS</Text>
+          <Text style={styles.bodyText}>
+            {ui.blendEnabled
+              ? "Cross-realm transitions are active. Modules can hand off context into connected realms."
+              : "Cross-realm transitions are paused. Realms currently operate in isolated mode."}
+          </Text>
+          <View style={styles.realmChipWrap}>
+            {environment.blendTargets.map((targetKey) => {
+              const target = realms.find((realm) => realm.key === targetKey) ?? realms[0];
+
+              return (
+                <View key={target.key} style={[styles.realmChip, { borderColor: ui.primaryColor }]}> 
+                  <Text style={[styles.realmChipText, { color: colors.boneWhite }]}>{target.shortTitle}</Text>
+                </View>
+              );
+            })}
+          </View>
+        </ContentCard>
 
         <View style={styles.featureList}>
           {selectedRealm.features.map((feature) => (
@@ -671,9 +842,7 @@ function JournalScreen({
           multiline
         />
 
-        <TouchableOpacity style={styles.primaryButton} onPress={onSave}>
-          <Text style={styles.primaryButtonText}>Save Reflection</Text>
-        </TouchableOpacity>
+        <PrimaryButton label="Save Reflection" onPress={onSave} />
       </ContentCard>
 
       <SectionTitle title="Journal History" subtitle="Stored locally and ordered by the latest entry." />
@@ -698,6 +867,8 @@ function SettingsScreen({
   setProfile: React.Dispatch<React.SetStateAction<BetaProfile>>;
   onReset: () => void;
 }) {
+  const ui = useUiRuntime();
+
   return (
     <View>
       <SectionTitle title="Beta Settings" subtitle="Local identity, privacy, and device controls." />
@@ -741,6 +912,57 @@ function SettingsScreen({
       </ContentCard>
 
       <ContentCard>
+        <Text style={styles.cardKicker}>INTERFACE ENGINE</Text>
+        <Text style={styles.cardTitle}>Customize color, style, and size.</Text>
+        <Text style={styles.bodyText}>
+          These controls instantly update the beta UI and stay persisted on this device.
+        </Text>
+
+        <FieldLabel label="Accent Color" helper="Primary interactive color for active controls." />
+        <SelectionRow<UiAccent>
+          items={[
+            { key: "crimson", label: "Crimson" },
+            { key: "sunset", label: "Sunset" },
+            { key: "emerald", label: "Emerald" },
+            { key: "electric", label: "Electric" },
+            { key: "amber", label: "Amber" }
+          ]}
+          value={ui.preferences.accent}
+          onSelect={(accent) => ui.setPreferences((current) => ({ ...current, accent }))}
+        />
+
+        <FieldLabel label="Interface Style" helper="How cards and surfaces are rendered." />
+        <SelectionRow<UiStylePreset>
+          items={[
+            { key: "vault", label: "Vault" },
+            { key: "glass", label: "Glass" },
+            { key: "mono", label: "Mono" }
+          ]}
+          value={ui.preferences.style}
+          onSelect={(style) => ui.setPreferences((current) => ({ ...current, style }))}
+        />
+
+        <FieldLabel label="UI Size" helper="Global sizing preset for readability and density." />
+        <SelectionRow<UiScale>
+          items={[
+            { key: "compact", label: "Compact" },
+            { key: "balanced", label: "Balanced" },
+            { key: "immersive", label: "Immersive" }
+          ]}
+          value={ui.preferences.scale}
+          onSelect={(scale) => ui.setPreferences((current) => ({ ...current, scale }))}
+        />
+
+        <FieldLabel label="Realm Blend" helper="Let environments hand off context between connected realms." />
+        <ToggleRow
+          label={ui.blendEnabled ? "Blend Enabled" : "Blend Disabled"}
+          description={ui.blendEnabled ? "Cross-realm flows are active." : "Realms stay isolated."}
+          value={ui.blendEnabled}
+          onValueChange={ui.setBlendEnabled}
+        />
+      </ContentCard>
+
+      <ContentCard>
         <Text style={styles.cardKicker}>DEVICE CONTROLS</Text>
         <Text style={styles.cardTitle}>Local beta data only.</Text>
         <Text style={styles.bodyText}>
@@ -757,9 +979,11 @@ function SettingsScreen({
 }
 
 function FieldLabel({ label, helper }: { label: string; helper: string }) {
+  const ui = useUiRuntime();
+
   return (
     <View style={styles.fieldLabelWrap}>
-      <Text style={styles.fieldLabel}>{label}</Text>
+      <Text style={[styles.fieldLabel, { fontSize: 14 * ui.scale }]}>{label}</Text>
       <Text style={styles.fieldHelper}>{helper}</Text>
     </View>
   );
@@ -769,13 +993,43 @@ function InputField({
   multiline,
   ...props
 }: React.ComponentProps<typeof TextInput> & { multiline?: boolean }) {
+  const ui = useUiRuntime();
+
   return (
     <TextInput
       {...props}
       placeholderTextColor={colors.mutedGray}
       multiline={multiline}
-      style={[styles.input, multiline && styles.inputMultiline]}
+      style={[
+        styles.input,
+        multiline && styles.inputMultiline,
+        {
+          borderColor: ui.preferences.style === "glass" ? "rgba(255,255,255,0.25)" : colors.borderBlack,
+          fontSize: 14 * ui.scale
+        }
+      ]}
     />
+  );
+}
+
+function PrimaryButton({ label, onPress }: { label: string; onPress: () => void }) {
+  const ui = useUiRuntime();
+
+  return (
+    <TouchableOpacity
+      style={[
+        styles.primaryButton,
+        {
+          backgroundColor: ui.primaryColor,
+          borderColor: ui.glowColor,
+          borderWidth: ui.preferences.style === "mono" ? 1 : 0,
+          paddingVertical: Math.round(15 * ui.scale)
+        }
+      ]}
+      onPress={onPress}
+    >
+      <Text style={[styles.primaryButtonText, { fontSize: 15 * ui.scale }]}>{label}</Text>
+    </TouchableOpacity>
   );
 }
 
@@ -835,6 +1089,8 @@ function ToggleRow({
   value: boolean;
   onValueChange: (value: boolean) => void;
 }) {
+  const ui = useUiRuntime();
+
   return (
     <View style={styles.toggleRow}>
       <View style={styles.toggleCopy}>
@@ -844,7 +1100,7 @@ function ToggleRow({
       <Switch
         value={value}
         onValueChange={onValueChange}
-        trackColor={{ false: colors.borderBlack, true: colors.sojournRed }}
+        trackColor={{ false: colors.borderBlack, true: ui.primaryColor }}
         thumbColor={value ? colors.boneWhite : colors.mutedGray}
       />
     </View>
@@ -860,6 +1116,8 @@ function RealmChipRow({
   onSelect: (realmKey: RealmKey) => void;
   realmsToShow: RealmKey[];
 }) {
+  const ui = useUiRuntime();
+
   return (
     <View style={styles.realmChipWrap}>
       {realmsToShow.map((realmKey) => {
@@ -870,9 +1128,13 @@ function RealmChipRow({
           <TouchableOpacity
             key={realm.key}
             onPress={() => onSelect(realm.key)}
-            style={[styles.realmChip, active && styles.realmChipActive]}
+            style={[
+              styles.realmChip,
+              active && styles.realmChipActive,
+              active && { backgroundColor: ui.primaryColor, borderColor: ui.glowColor }
+            ]}
           >
-            <Text style={styles.realmIcon}>{realm.icon}</Text>
+            <Text style={[styles.realmIcon, { color: ui.glowColor }]}>{realm.icon}</Text>
             <Text style={[styles.realmChipText, active && styles.realmChipTextActive]}>
               {realm.shortTitle}
             </Text>
@@ -892,6 +1154,8 @@ function MoodRow({
   activeMood: string;
   onSelect: (mood: string) => void;
 }) {
+  const ui = useUiRuntime();
+
   return (
     <View style={styles.moodRow}>
       {moods.map((mood) => {
@@ -901,7 +1165,11 @@ function MoodRow({
           <TouchableOpacity
             key={mood}
             onPress={() => onSelect(mood)}
-            style={[styles.moodChip, active && styles.moodChipActive]}
+            style={[
+              styles.moodChip,
+              active && styles.moodChipActive,
+              active && { backgroundColor: ui.primaryColor, borderColor: ui.glowColor }
+            ]}
           >
             <Text style={[styles.moodChipText, active && styles.moodChipTextActive]}>{mood}</Text>
           </TouchableOpacity>
@@ -911,13 +1179,70 @@ function MoodRow({
   );
 }
 
+function SelectionRow<T extends string>({
+  items,
+  value,
+  onSelect
+}: {
+  items: Array<{ key: T; label: string }>;
+  value: T;
+  onSelect: (value: T) => void;
+}) {
+  const ui = useUiRuntime();
+
+  return (
+    <View style={styles.realmChipWrap}>
+      {items.map((item) => {
+        const active = item.key === value;
+
+        return (
+          <TouchableOpacity
+            key={item.key}
+            onPress={() => onSelect(item.key)}
+            style={[
+              styles.realmChip,
+              active && { backgroundColor: ui.primaryColor, borderColor: ui.glowColor }
+            ]}
+          >
+            <Text style={[styles.realmChipText, active && styles.realmChipTextActive]}>{item.label}</Text>
+          </TouchableOpacity>
+        );
+      })}
+    </View>
+  );
+}
+
 function ContentCard({ children }: { children: React.ReactNode }) {
-  return <View style={styles.contentCard}>{children}</View>;
+  const ui = useUiRuntime();
+
+  const cardPreset =
+    ui.preferences.style === "glass"
+      ? {
+          backgroundColor: "rgba(255,255,255,0.06)",
+          borderColor: "rgba(255,255,255,0.18)"
+        }
+      : ui.preferences.style === "mono"
+        ? {
+            backgroundColor: colors.deepBlack,
+            borderColor: "#4B5563"
+          }
+        : {
+            backgroundColor: colors.cardBlack,
+            borderColor: colors.borderBlack
+          };
+
+  return (
+    <View style={[styles.contentCard, cardPreset, { padding: Math.round(spacing.md * ui.scale) }]}>
+      {children}
+    </View>
+  );
 }
 
 function Pill({ label }: { label: string }) {
+  const ui = useUiRuntime();
+
   return (
-    <View style={styles.pill}>
+    <View style={[styles.pill, { borderColor: ui.primaryColor }]}> 
       <Text style={styles.pillText}>{label}</Text>
     </View>
   );

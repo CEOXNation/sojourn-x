@@ -1,4 +1,4 @@
-import type { Realm } from "../types";
+import type { Realm, RealmEnvironment } from "../types";
 
 export const realms: Realm[] = [
   {
@@ -170,3 +170,144 @@ export const growthSignals = [
     detail: "You are moving from hidden expression to intentional presence."
   }
 ];
+
+export const realmEnvironments: Record<Realm["key"], RealmEnvironment> = {
+  anonymous: {
+    realmKey: "anonymous",
+    mission: "Give people a safe place to express truth without identity performance.",
+    atmosphere: "Low-light, high-safety, consent-first expression zone.",
+    modules: [
+      {
+        name: "Confession Channels",
+        description: "Threaded posts with emotion-aware prompts and optional anonymity shields.",
+        capabilities: ["Anonymous posting", "Topic routing", "Safety filters"]
+      },
+      {
+        name: "Courage Questions",
+        description: "Question walls designed for vulnerable conversations and peer support.",
+        capabilities: ["Prompt pools", "Community replies", "Context tags"]
+      },
+      {
+        name: "Silent Reflection",
+        description: "Private thought scratchpad for drafting before posting publicly in-realm.",
+        capabilities: ["Private drafts", "Mood tagging", "One-tap publish"]
+      }
+    ],
+    blendTargets: ["growth", "spiritual", "messaging"]
+  },
+  social: {
+    realmKey: "social",
+    mission: "Enable visible identity when users choose to be seen.",
+    atmosphere: "Clean, expressive, profile-forward social canvas.",
+    modules: [
+      {
+        name: "Identity Profiles",
+        description: "Flexible profiles with selective visibility and layered audience controls.",
+        capabilities: ["Profile controls", "Follower modes", "Presence indicators"]
+      },
+      {
+        name: "Story Streams",
+        description: "Media and text streams that can map directly to active personal themes.",
+        capabilities: ["Stories", "Post scheduling", "Realm cross-posting"]
+      },
+      {
+        name: "Circle Graph",
+        description: "Friends and followers graph with trust tiers and circle-based visibility.",
+        capabilities: ["Circle roles", "Trust tiers", "Selective reach"]
+      }
+    ],
+    blendTargets: ["messaging", "marketplace", "growth"]
+  },
+  messaging: {
+    realmKey: "messaging",
+    mission: "Protect private communication inside and across realms.",
+    atmosphere: "Quiet, direct, private corridor for trusted exchange.",
+    modules: [
+      {
+        name: "Private Threads",
+        description: "One-to-one and small group conversations with privacy-first defaults.",
+        capabilities: ["Direct chat", "Group threads", "Read privacy"]
+      },
+      {
+        name: "Ephemeral Mode",
+        description: "Timed message behavior for sensitive conversations.",
+        capabilities: ["Message expiry", "Screenshot cues", "Session locks"]
+      },
+      {
+        name: "Signal Relay",
+        description: "Route interactions from other realms into secure conversation rooms.",
+        capabilities: ["Realm handoff", "Context cards", "Secure replies"]
+      }
+    ],
+    blendTargets: ["anonymous", "social", "marketplace"]
+  },
+  marketplace: {
+    realmKey: "marketplace",
+    mission: "Facilitate trusted exchange without sacrificing privacy.",
+    atmosphere: "Curated exchange hall with trust, verification, and calm.",
+    modules: [
+      {
+        name: "Sacred Listings",
+        description: "Structured listings for physical, digital, and service-based offerings.",
+        capabilities: ["Listing templates", "Verification badges", "Privacy tiers"]
+      },
+      {
+        name: "Offer Vault",
+        description: "Secure offer and negotiation lane between buyers and sellers.",
+        capabilities: ["Private offers", "Escrow-ready flow", "Negotiation trails"]
+      },
+      {
+        name: "Delivery Loop",
+        description: "Status and fulfillment lifecycle designed for transparency.",
+        capabilities: ["Status tracking", "Proof upload", "Completion receipts"]
+      }
+    ],
+    blendTargets: ["messaging", "social", "growth"]
+  },
+  spiritual: {
+    realmKey: "spiritual",
+    mission: "Support grounding, reflection, and symbolic meaning-making.",
+    atmosphere: "Slow, contemplative temple-like environment.",
+    modules: [
+      {
+        name: "Daily Rituals",
+        description: "Daily check-ins and grounding prompts to anchor attention.",
+        capabilities: ["Ritual prompts", "Check-in cadence", "Streak memory"]
+      },
+      {
+        name: "Symbolic Pulls",
+        description: "Tarot/rune-inspired symbolic cards for reflection and journaling.",
+        capabilities: ["Card pulls", "Interpretation cues", "Journal handoff"]
+      },
+      {
+        name: "Meditation Vault",
+        description: "Guided and silent meditation sessions linked to emotional state.",
+        capabilities: ["Guided sessions", "Breath timers", "Post-session notes"]
+      }
+    ],
+    blendTargets: ["growth", "anonymous", "messaging"]
+  },
+  growth: {
+    realmKey: "growth",
+    mission: "Turn self-observation into intentional personal evolution.",
+    atmosphere: "Structured progress studio with reflective analytics.",
+    modules: [
+      {
+        name: "Pattern Lens",
+        description: "Surface recurring emotional and behavioral patterns over time.",
+        capabilities: ["Mood trends", "Pattern detection", "Insight highlights"]
+      },
+      {
+        name: "Identity Arcs",
+        description: "Track where the user has been and who they are becoming.",
+        capabilities: ["Arc timelines", "Milestone markers", "Theme clustering"]
+      },
+      {
+        name: "Habit Signals",
+        description: "Connect actions, reflections, and outcomes into practical loops.",
+        capabilities: ["Habit tracking", "Reminder loops", "Outcome notes"]
+      }
+    ],
+    blendTargets: ["spiritual", "anonymous", "social"]
+  }
+};
