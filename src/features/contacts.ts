@@ -167,7 +167,7 @@ export async function syncTrustedContacts(enabled: boolean): Promise<ContactSync
   const response = await ContactsModule.getContactsAsync({
     fields: [ContactsModule.Fields.Name, ContactsModule.Fields.PhoneNumbers],
     sort: ContactsModule.SortTypes.FirstName,
-    pageSize: 50
+    pageSize: 12
   });
 
   const contacts = response.data

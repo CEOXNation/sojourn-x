@@ -306,6 +306,10 @@ export default function BetaApp() {
   }, [profile.homeRealm]);
 
   const handleContactSync = async () => {
+    if (syncingContacts) {
+      return;
+    }
+
     if (!profile.contactsSyncEnabled) {
       setSyncedContacts([]);
       setContactSyncState(createEmptyContactSyncState());
@@ -337,7 +341,7 @@ export default function BetaApp() {
     if (!contactSyncState.lastSyncedAt) {
       void handleContactSync();
     }
-  }, [hydrated, profile.contactsSyncEnabled]);
+  }, [hydrated, profile.contactsSyncEnabled, syncingContacts]);
 
   const selectedRealm = useMemo(
     () => realms.find((realm) => realm.key === selectedRealmKey) ?? realms[0],
@@ -1746,6 +1750,7 @@ function ContactSyncCard({
 }) {
   const ui = useUiRuntime();
   const activeContacts = syncedContacts.slice(0, 4);
+  const hasRelayNumber = profile.phoneNumber.trim().length > 0;
 
   return (
     <ContentCard>
@@ -1775,7 +1780,7 @@ function ContactSyncCard({
         <Text style={styles.helperNote}>{contactSyncSummary(contactSyncState)}</Text>
       )}
 
-      {profile.phoneNumber.trim().length > 0 && (
+      {hasRelayNumber && (
         <Text style={[styles.helperNote, styles.contactRelayLabel]}>Relay anchor: {profile.phoneNumber.trim()}</Text>
       )}
 
