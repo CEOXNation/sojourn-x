@@ -18,6 +18,7 @@
     "vault:ready": "npm run governance:init && npm run preflight"
   },
   "dependencies": {
+    "@react-native-async-storage/async-storage": "2.2.0",
     "expo": "latest",
     "expo-status-bar": "latest",
     "react": "19.2.3",

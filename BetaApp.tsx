@@ -1,0 +1,1453 @@
+import AsyncStorage from "@react-native-async-storage/async-storage";
+import React, { useEffect, useMemo, useState } from "react";
+import {
+  Alert,
+  SafeAreaView,
+  ScrollView,
+  StatusBar,
+  StyleSheet,
+  Switch,
+  Text,
+  TextInput,
+  TouchableOpacity,
+  View
+} from "react-native";
+
+import { betaChecklist, betaJournalSeed, betaMoods, betaPulseSeed, betaRealmPreviewOrder, betaTabs } from "./src/data/beta";
+import { realms } from "./src/data/realms";
+import { clearKeys, createId, loadJson, saveJson } from "./src/storage";
+import { colors, radius, shadow, spacing } from "./src/theme";
+import type { BetaProfile, BetaTab, JournalEntry, PulsePost, Realm, RealmKey } from "./src/types";
+
+const STORAGE_KEYS = {
+  profile: "sojournx.beta.profile",
+  pulses: "sojournx.beta.pulses",
+  journal: "sojournx.beta.journal"
+} as const;
+
+const defaultProfile: BetaProfile = {
+  handle: "",
+  pronouns: "they/them",
+  bio: "",
+  homeRealm: "anonymous",
+  privateMode: true,
+  onboardingComplete: false
+};
+
+const defaultPulseMood = betaMoods[0];
+
+export default function BetaApp() {
+  const [ageConfirmed, setAgeConfirmed] = useState(false);
+  const [hydrated, setHydrated] = useState(false);
+  const [activeTab, setActiveTab] = useState<BetaTab>("Home");
+  const [profile, setProfile] = useState<BetaProfile>(defaultProfile);
+  const [posts, setPosts] = useState<PulsePost[]>(betaPulseSeed);
+  const [journalEntries, setJournalEntries] = useState<JournalEntry[]>(betaJournalSeed);
+  const [selectedRealmKey, setSelectedRealmKey] = useState<RealmKey>(defaultProfile.homeRealm);
+  const [pulseBody, setPulseBody] = useState("");
+  const [pulseMood, setPulseMood] = useState(defaultPulseMood);
+  const [pulseRealmKey, setPulseRealmKey] = useState<RealmKey>(defaultProfile.homeRealm);
+  const [journalBody, setJournalBody] = useState("");
+  const [journalMood, setJournalMood] = useState(betaMoods[1]);
+
+  useEffect(() => {
+    let cancelled = false;
+
+    const loadState = async () => {
+      const [storedProfile, storedPosts, storedJournal] = await Promise.all([
+        loadJson<BetaProfile | null>(STORAGE_KEYS.profile, null),
+        loadJson<PulsePost[] | null>(STORAGE_KEYS.pulses, null),
+        loadJson<JournalEntry[] | null>(STORAGE_KEYS.journal, null)
+      ]);
+
+      if (cancelled) {
+        return;
+      }
+
+      if (storedProfile) {
+        setProfile({ ...defaultProfile, ...storedProfile });
+        setSelectedRealmKey(storedProfile.homeRealm || defaultProfile.homeRealm);
+        setPulseRealmKey(storedProfile.homeRealm || defaultProfile.homeRealm);
+      }
+
+      if (storedPosts) {
+        setPosts(storedPosts);
+      }
+
+      if (storedJournal) {
+        setJournalEntries(storedJournal);
+      }
+
+      setHydrated(true);
+    };
+
+    void loadState();
+
+    return () => {
+      cancelled = true;
+    };
+  }, []);
+
+  useEffect(() => {
+    if (!hydrated) {
+      return;
+    }
+
+    void Promise.all([
+      saveJson(STORAGE_KEYS.profile, profile),
+      saveJson(STORAGE_KEYS.pulses, posts),
+      saveJson(STORAGE_KEYS.journal, journalEntries)
+    ]);
+  }, [hydrated, profile, posts, journalEntries]);
+
+  useEffect(() => {
+    setPulseRealmKey(profile.homeRealm);
+    setSelectedRealmKey(profile.homeRealm);
+  }, [profile.homeRealm]);
+
+  const selectedRealm = useMemo(
+    () => realms.find((realm) => realm.key === selectedRealmKey) ?? realms[0],
+    [selectedRealmKey]
+  );
+
+  const homeRealm = useMemo(
+    () => realms.find((realm) => realm.key === profile.homeRealm) ?? realms[0],
+    [profile.homeRealm]
+  );
+
+  const betaMetrics = useMemo(
+    () => [
+      { label: "Vault Status", value: ageConfirmed ? "Open" : "Locked" },
+      { label: "Pulses", value: String(posts.length) },
+      { label: "Entries", value: String(journalEntries.length) },
+      { label: "Mode", value: profile.privateMode ? "Private" : "Visible" }
+    ],
+    [ageConfirmed, journalEntries.length, posts.length, profile.privateMode]
+  );
+
+  if (!ageConfirmed) {
+    return <AgeGate onEnter={() => setAgeConfirmed(true)} />;
+  }
+
+  if (!hydrated) {
+    return <LoadingVault />;
+  }
+
+  if (!profile.onboardingComplete) {
+    return (
+      <BetaSetup
+        profile={profile}
+        setProfile={setProfile}
+        onContinue={() => setProfile((current) => ({ ...current, onboardingComplete: true }))}
+      />
+    );
+  }
+
+  return (
+    <SafeAreaView style={styles.safe}>
+      <StatusBar barStyle="light-content" />
+
+      <View style={styles.appShell}>
+        <Header profile={profile} />
+        <Nav activeTab={activeTab} setActiveTab={setActiveTab} />
+
+        <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={styles.content}>
+          {activeTab === "Home" && (
+            <HomeScreen
+              profile={profile}
+              betaMetrics={betaMetrics}
+              homeRealm={homeRealm}
+              posts={posts}
+              journalEntries={journalEntries}
+              onJump={(tab) => setActiveTab(tab)}
+            />
+          )}
+
+          {activeTab === "Pulse" && (
+            <PulseScreen
+              profile={profile}
+              pulseBody={pulseBody}
+              setPulseBody={setPulseBody}
+              pulseMood={pulseMood}
+              setPulseMood={setPulseMood}
+              pulseRealmKey={pulseRealmKey}
+              setPulseRealmKey={setPulseRealmKey}
+              posts={posts}
+              onPublish={() => {
+                const body = pulseBody.trim();
+
+                if (!body) {
+                  Alert.alert("Write a pulse", "Add a few words before broadcasting to the vault.");
+                  return;
+                }
+
+                const nextPost: PulsePost = {
+                  id: createId("pulse"),
+                  author: profile.privateMode ? "Anonymous" : profile.handle || "Vault Member",
+                  realmKey: pulseRealmKey,
+                  mood: pulseMood,
+                  body,
+                  createdAt: new Date().toISOString(),
+                  replies: 0
+                };
+
+                setPosts((current) => [nextPost, ...current]);
+                setPulseBody("");
+              }}
+            />
+          )}
+
+          {activeTab === "Realms" && (
+            <RealmsScreen
+              profile={profile}
+              selectedRealm={selectedRealm}
+              setSelectedRealmKey={setSelectedRealmKey}
+              onMakeHome={(realmKey) => setProfile((current) => ({ ...current, homeRealm: realmKey }))}
+            />
+          )}
+
+          {activeTab === "Journal" && (
+            <JournalScreen
+              journalEntries={journalEntries}
+              journalBody={journalBody}
+              setJournalBody={setJournalBody}
+              journalMood={journalMood}
+              setJournalMood={setJournalMood}
+              onSave={() => {
+                const reflection = journalBody.trim();
+
+                if (!reflection) {
+                  Alert.alert("Write a reflection", "Add a thought before saving the journal entry.");
+                  return;
+                }
+
+                const nextEntry: JournalEntry = {
+                  id: createId("journal"),
+                  mood: journalMood,
+                  reflection,
+                  createdAt: new Date().toISOString()
+                };
+
+                setJournalEntries((current) => [nextEntry, ...current]);
+                setJournalBody("");
+              }}
+            />
+          )}
+
+          {activeTab === "Settings" && (
+            <SettingsScreen
+              profile={profile}
+              setProfile={setProfile}
+              onReset={() => {
+                Alert.alert(
+                  "Reset local vault?",
+                  "This clears the beta profile, pulse feed, and journal from this device.",
+                  [
+                    { text: "Cancel", style: "cancel" },
+                    {
+                      text: "Reset",
+                      style: "destructive",
+                      onPress: async () => {
+                        await clearKeys([STORAGE_KEYS.profile, STORAGE_KEYS.pulses, STORAGE_KEYS.journal]);
+                        setProfile(defaultProfile);
+                        setPosts(betaPulseSeed);
+                        setJournalEntries(betaJournalSeed);
+                        setActiveTab("Home");
+                        setSelectedRealmKey(defaultProfile.homeRealm);
+                        setPulseRealmKey(defaultProfile.homeRealm);
+                        setPulseMood(defaultPulseMood);
+                        setJournalMood(betaMoods[1]);
+                        setPulseBody("");
+                        setJournalBody("");
+                        setAgeConfirmed(false);
+                        setHydrated(true);
+                      }
+                    }
+                  ]
+                );
+              }}
+            />
+          )}
+        </ScrollView>
+      </View>
+    </SafeAreaView>
+  );
+}
+
+function AgeGate({ onEnter }: { onEnter: () => void }) {
+  return (
+    <SafeAreaView style={styles.safe}>
+      <View style={styles.ageGate}>
+        <View style={styles.glowOrb} />
+        <Text style={styles.logoMark}>X</Text>
+        <Text style={styles.title}>SojournX Beta</Text>
+        <Text style={styles.tagline}>Every version of you has a realm.</Text>
+
+        <View style={styles.ageCard}>
+          <Text style={styles.ageTitle}>Enter the Vault</Text>
+          <Text style={styles.bodyText}>
+            SojournX Beta is an adults-only digital sanctuary for private identity, expression,
+            reflection, and connection.
+          </Text>
+          <Text style={styles.disclaimer}>
+            By entering, you confirm that you are 18+ and agree to use the platform respectfully.
+          </Text>
+
+          <TouchableOpacity style={styles.primaryButton} onPress={onEnter}>
+            <Text style={styles.primaryButtonText}>I am 18+ - Enter SojournX</Text>
+          </TouchableOpacity>
+        </View>
+
+        <Text style={styles.footerNote}>
+          Beta build. Profile, pulse feed, and journal data are stored locally on this device.
+        </Text>
+      </View>
+    </SafeAreaView>
+  );
+}
+
+function LoadingVault() {
+  return (
+    <SafeAreaView style={styles.safe}>
+      <View style={styles.loadingWrap}>
+        <Text style={styles.loadingKicker}>VAULT BOOTING</Text>
+        <Text style={styles.loadingTitle}>Loading your beta state...</Text>
+      </View>
+    </SafeAreaView>
+  );
+}
+
+function BetaSetup({
+  profile,
+  setProfile,
+  onContinue
+}: {
+  profile: BetaProfile;
+  setProfile: React.Dispatch<React.SetStateAction<BetaProfile>>;
+  onContinue: () => void;
+}) {
+  return (
+    <SafeAreaView style={styles.safe}>
+      <StatusBar barStyle="light-content" />
+
+      <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={styles.content}>
+        <View style={[styles.heroCard, shadow]}>
+          <Text style={styles.heroEyebrow}>BETA SETUP</Text>
+          <Text style={styles.heroTitle}>Shape the first true vault identity.</Text>
+          <Text style={styles.heroBody}>
+            This profile stays local to your device and unlocks the beta experience.
+          </Text>
+        </View>
+
+        <ContentCard>
+          <FieldLabel label="Handle" helper="How the beta will address you." />
+          <InputField
+            value={profile.handle}
+            onChangeText={(handle) => setProfile((current) => ({ ...current, handle }))}
+            placeholder="Your vault name"
+          />
+
+          <FieldLabel label="Pronouns" helper="Optional identity signal." />
+          <InputField
+            value={profile.pronouns}
+            onChangeText={(pronouns) => setProfile((current) => ({ ...current, pronouns }))}
+            placeholder="they/them"
+          />
+
+          <FieldLabel label="Bio" helper="One line that defines the current version of you." />
+          <InputField
+            value={profile.bio}
+            onChangeText={(bio) => setProfile((current) => ({ ...current, bio }))}
+            placeholder="Testing the vault"
+            multiline
+          />
+        </ContentCard>
+
+        <ContentCard>
+          <FieldLabel label="Home Realm" helper="Your default realm when the app opens." />
+          <RealmChipRow
+            realmsToShow={betaRealmPreviewOrder}
+            activeRealmKey={profile.homeRealm}
+            onSelect={(homeRealm) => setProfile((current) => ({ ...current, homeRealm }))}
+          />
+
+          <FieldLabel label="Private Mode" helper="Hide your handle on posted pulses." />
+          <ToggleRow
+            label={profile.privateMode ? "Private" : "Visible"}
+            description={profile.privateMode ? "Posts are anonymized." : "Posts show your handle."}
+            value={profile.privateMode}
+            onValueChange={(privateMode) => setProfile((current) => ({ ...current, privateMode }))}
+          />
+        </ContentCard>
+
+        <TouchableOpacity style={styles.primaryButton} onPress={onContinue}>
+          <Text style={styles.primaryButtonText}>Enter Beta Vault</Text>
+        </TouchableOpacity>
+      </ScrollView>
+    </SafeAreaView>
+  );
+}
+
+function Header({ profile }: { profile: BetaProfile }) {
+  return (
+    <View style={styles.header}>
+      <View>
+        <Text style={styles.brand}>SojournX Beta</Text>
+        <Text style={styles.headerSub}>Local-first multi-realm identity platform</Text>
+      </View>
+
+      <View style={styles.vaultBadge}>
+        <Text style={styles.vaultBadgeText}>{profile.privateMode ? "PRIVATE" : "OPEN"}</Text>
+      </View>
+    </View>
+  );
+}
+
+function Nav({
+  activeTab,
+  setActiveTab
+}: {
+  activeTab: BetaTab;
+  setActiveTab: (tab: BetaTab) => void;
+}) {
+  return (
+    <View style={styles.nav}>
+      {betaTabs.map((tab) => {
+        const active = tab === activeTab;
+
+        return (
+          <TouchableOpacity
+            key={tab}
+            onPress={() => setActiveTab(tab)}
+            style={[styles.navItem, active && styles.navItemActive]}
+          >
+            <Text style={[styles.navText, active && styles.navTextActive]}>{tab}</Text>
+          </TouchableOpacity>
+        );
+      })}
+    </View>
+  );
+}
+
+function HomeScreen({
+  profile,
+  betaMetrics,
+  homeRealm,
+  posts,
+  journalEntries,
+  onJump
+}: {
+  profile: BetaProfile;
+  betaMetrics: Array<{ label: string; value: string }>;
+  homeRealm: Realm;
+  posts: PulsePost[];
+  journalEntries: JournalEntry[];
+  onJump: (tab: BetaTab) => void;
+}) {
+  const recentPulse = posts[0];
+  const recentEntry = journalEntries[0];
+
+  return (
+    <View>
+      <View style={[styles.heroCard, shadow]}>
+        <Text style={styles.heroEyebrow}>BETA HOME</Text>
+        <Text style={styles.heroTitle}>Welcome back, {profile.handle || "Vault member"}.</Text>
+        <Text style={styles.heroBody}>
+          Your default realm is {homeRealm.title}. The local beta now remembers your identity,
+          pulse feed, and journal on this device.
+        </Text>
+
+        <View style={styles.heroPills}>
+          <Pill label={profile.privateMode ? "Private posts" : "Visible posts"} />
+          <Pill label={`${posts.length} pulses`} />
+          <Pill label={`${journalEntries.length} journal entries`} />
+        </View>
+      </View>
+
+      <SectionTitle title="Beta Signals" subtitle="The first true release needs visible proof of continuity." />
+
+      <View style={styles.metricGrid}>
+        {betaMetrics.map((metric) => (
+          <MetricCard key={metric.label} label={metric.label} value={metric.value} />
+        ))}
+      </View>
+
+      <SectionTitle title="Launch Lane" subtitle="Use the beta to move through each realm intentionally." />
+
+      <View style={styles.launchRow}>
+        <LaunchButton label="Pulse" hint="Broadcast a thought" onPress={() => onJump("Pulse")} />
+        <LaunchButton label="Journal" hint="Capture an insight" onPress={() => onJump("Journal")} />
+      </View>
+
+      <SectionTitle title="Vault Checklist" subtitle="Proof that the beta is actually doing work." />
+
+      {betaChecklist.map((item) => (
+        <ChecklistCard key={item.title} title={item.title} detail={item.detail} />
+      ))}
+
+      {recentPulse && (
+        <ContentCard>
+          <Text style={styles.cardKicker}>RECENT PULSE</Text>
+          <Text style={styles.cardTitle}>{recentPulse.body}</Text>
+          <Text style={styles.cardMeta}>
+            {recentPulse.author} · {recentPulse.mood} · {formatRelativeTime(recentPulse.createdAt)}
+          </Text>
+        </ContentCard>
+      )}
+
+      {recentEntry && (
+        <ContentCard>
+          <Text style={styles.cardKicker}>RECENT JOURNAL</Text>
+          <Text style={styles.cardTitle}>{recentEntry.mood}</Text>
+          <Text style={styles.bodyText}>{recentEntry.reflection}</Text>
+          <Text style={styles.cardMeta}>{formatRelativeTime(recentEntry.createdAt)}</Text>
+        </ContentCard>
+      )}
+    </View>
+  );
+}
+
+function PulseScreen({
+  profile,
+  pulseBody,
+  setPulseBody,
+  pulseMood,
+  setPulseMood,
+  pulseRealmKey,
+  setPulseRealmKey,
+  posts,
+  onPublish
+}: {
+  profile: BetaProfile;
+  pulseBody: string;
+  setPulseBody: React.Dispatch<React.SetStateAction<string>>;
+  pulseMood: string;
+  setPulseMood: React.Dispatch<React.SetStateAction<string>>;
+  pulseRealmKey: RealmKey;
+  setPulseRealmKey: React.Dispatch<React.SetStateAction<RealmKey>>;
+  posts: PulsePost[];
+  onPublish: () => void;
+}) {
+  return (
+    <View>
+      <SectionTitle title="Pulse Feed" subtitle="Post into the vault without performing for the crowd." />
+
+      <ContentCard>
+        <FieldLabel label="What do you want to say?" helper="Short, honest, and contained." />
+        <InputField
+          value={pulseBody}
+          onChangeText={setPulseBody}
+          placeholder="Write your pulse here"
+          multiline
+        />
+
+        <FieldLabel label="Mood" helper="How the pulse should feel." />
+        <MoodRow moods={betaMoods} activeMood={pulseMood} onSelect={setPulseMood} />
+
+        <FieldLabel label="Realm" helper="Where this pulse belongs." />
+        <RealmChipRow
+          activeRealmKey={pulseRealmKey}
+          onSelect={setPulseRealmKey}
+          realmsToShow={betaRealmPreviewOrder}
+        />
+
+        <TouchableOpacity style={styles.primaryButton} onPress={onPublish}>
+          <Text style={styles.primaryButtonText}>Broadcast to Vault</Text>
+        </TouchableOpacity>
+
+        <Text style={styles.helperNote}>
+          {profile.privateMode ? "Your handle stays hidden." : `Posting as ${profile.handle || "Vault member"}.`}
+        </Text>
+      </ContentCard>
+
+      <SectionTitle title="Live Feed" subtitle="Seeded posts plus whatever you publish next." />
+
+      {posts.map((post) => (
+        <PulseCard key={post.id} post={post} />
+      ))}
+    </View>
+  );
+}
+
+function RealmsScreen({
+  profile,
+  selectedRealm,
+  setSelectedRealmKey,
+  onMakeHome
+}: {
+  profile: BetaProfile;
+  selectedRealm: Realm;
+  setSelectedRealmKey: React.Dispatch<React.SetStateAction<RealmKey>>;
+  onMakeHome: (realmKey: RealmKey) => void;
+}) {
+  return (
+    <View>
+      <SectionTitle title="The SojournX Realms" subtitle="Each realm is a different mode of being." />
+
+      <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.realmSelector}>
+        {realms.map((realm) => {
+          const active = selectedRealm.key === realm.key;
+
+          return (
+            <TouchableOpacity
+              key={realm.key}
+              onPress={() => setSelectedRealmKey(realm.key)}
+              style={[styles.realmChip, active && styles.realmChipActive]}
+            >
+              <Text style={styles.realmIcon}>{realm.icon}</Text>
+              <Text style={[styles.realmChipText, active && styles.realmChipTextActive]}>
+                {realm.shortTitle}
+              </Text>
+            </TouchableOpacity>
+          );
+        })}
+      </ScrollView>
+
+      <View style={[styles.realmDetail, shadow]}>
+        <Text style={styles.realmDetailIcon}>{selectedRealm.icon}</Text>
+        <Text style={styles.realmDetailTitle}>{selectedRealm.title}</Text>
+        <Text style={styles.realmPromise}>{selectedRealm.promise}</Text>
+        <Text style={styles.bodyText}>{selectedRealm.description}</Text>
+
+        <View style={styles.featureList}>
+          {selectedRealm.features.map((feature) => (
+            <View key={feature} style={styles.featureRow}>
+              <Text style={styles.featureBullet}>◆</Text>
+              <Text style={styles.featureText}>{feature}</Text>
+            </View>
+          ))}
+        </View>
+
+        <TouchableOpacity
+          style={[styles.secondaryButton, profile.homeRealm === selectedRealm.key && styles.secondaryButtonDisabled]}
+          onPress={() => onMakeHome(selectedRealm.key)}
+        >
+          <Text style={styles.secondaryButtonText}>
+            {profile.homeRealm === selectedRealm.key ? "Home realm selected" : "Make home realm"}
+          </Text>
+        </TouchableOpacity>
+      </View>
+
+      <ContentCard>
+        <Text style={styles.cardKicker}>CATEGORY</Text>
+        <Text style={styles.cardTitle}>Multi-Realm Identity Platform</Text>
+        <Text style={styles.bodyText}>
+          SojournX Beta now keeps a home realm, a preview realm, and a live profile so the category
+          is measurable instead of just promised.
+        </Text>
+      </ContentCard>
+    </View>
+  );
+}
+
+function JournalScreen({
+  journalEntries,
+  journalBody,
+  setJournalBody,
+  journalMood,
+  setJournalMood,
+  onSave
+}: {
+  journalEntries: JournalEntry[];
+  journalBody: string;
+  setJournalBody: React.Dispatch<React.SetStateAction<string>>;
+  journalMood: string;
+  setJournalMood: React.Dispatch<React.SetStateAction<string>>;
+  onSave: () => void;
+}) {
+  return (
+    <View>
+      <SectionTitle title="Growth Journal" subtitle="A private record of how the beta feels." />
+
+      <ContentCard>
+        <FieldLabel label="Mood" helper="Pick the tone of the entry." />
+        <MoodRow moods={betaMoods} activeMood={journalMood} onSelect={setJournalMood} />
+
+        <FieldLabel label="Reflection" helper="Write the thing you do not want to lose." />
+        <InputField
+          value={journalBody}
+          onChangeText={setJournalBody}
+          placeholder="What changed today?"
+          multiline
+        />
+
+        <TouchableOpacity style={styles.primaryButton} onPress={onSave}>
+          <Text style={styles.primaryButtonText}>Save Reflection</Text>
+        </TouchableOpacity>
+      </ContentCard>
+
+      <SectionTitle title="Journal History" subtitle="Stored locally and ordered by the latest entry." />
+
+      {journalEntries.map((entry) => (
+        <ContentCard key={entry.id}>
+          <Text style={styles.cardKicker}>{entry.mood}</Text>
+          <Text style={styles.cardTitle}>{formatRelativeTime(entry.createdAt)}</Text>
+          <Text style={styles.bodyText}>{entry.reflection}</Text>
+        </ContentCard>
+      ))}
+    </View>
+  );
+}
+
+function SettingsScreen({
+  profile,
+  setProfile,
+  onReset
+}: {
+  profile: BetaProfile;
+  setProfile: React.Dispatch<React.SetStateAction<BetaProfile>>;
+  onReset: () => void;
+}) {
+  return (
+    <View>
+      <SectionTitle title="Beta Settings" subtitle="Local identity, privacy, and device controls." />
+
+      <ContentCard>
+        <FieldLabel label="Handle" helper="Update the beta identity." />
+        <InputField
+          value={profile.handle}
+          onChangeText={(handle) => setProfile((current) => ({ ...current, handle }))}
+        />
+
+        <FieldLabel label="Pronouns" helper="Identity note used across the beta." />
+        <InputField
+          value={profile.pronouns}
+          onChangeText={(pronouns) => setProfile((current) => ({ ...current, pronouns }))}
+        />
+
+        <FieldLabel label="Bio" helper="A brief statement about the current version of you." />
+        <InputField
+          value={profile.bio}
+          onChangeText={(bio) => setProfile((current) => ({ ...current, bio }))}
+          multiline
+        />
+      </ContentCard>
+
+      <ContentCard>
+        <FieldLabel label="Home Realm" helper="Your default realm when the vault opens." />
+        <RealmChipRow
+          activeRealmKey={profile.homeRealm}
+          onSelect={(homeRealm) => setProfile((current) => ({ ...current, homeRealm }))}
+          realmsToShow={betaRealmPreviewOrder}
+        />
+
+        <FieldLabel label="Private Mode" helper="Anonymize pulse posts by default." />
+        <ToggleRow
+          label={profile.privateMode ? "Private" : "Visible"}
+          description={profile.privateMode ? "Posts are anonymized." : "Posts show your handle."}
+          value={profile.privateMode}
+          onValueChange={(privateMode) => setProfile((current) => ({ ...current, privateMode }))}
+        />
+      </ContentCard>
+
+      <ContentCard>
+        <Text style={styles.cardKicker}>DEVICE CONTROLS</Text>
+        <Text style={styles.cardTitle}>Local beta data only.</Text>
+        <Text style={styles.bodyText}>
+          Resetting clears the local vault state from this device. Nothing in this beta leaves the
+          device unless you build a backend around it.
+        </Text>
+
+        <TouchableOpacity style={[styles.secondaryButton, styles.destructiveButton]} onPress={onReset}>
+          <Text style={styles.secondaryButtonText}>Reset Local Vault</Text>
+        </TouchableOpacity>
+      </ContentCard>
+    </View>
+  );
+}
+
+function FieldLabel({ label, helper }: { label: string; helper: string }) {
+  return (
+    <View style={styles.fieldLabelWrap}>
+      <Text style={styles.fieldLabel}>{label}</Text>
+      <Text style={styles.fieldHelper}>{helper}</Text>
+    </View>
+  );
+}
+
+function InputField({
+  multiline,
+  ...props
+}: React.ComponentProps<typeof TextInput> & { multiline?: boolean }) {
+  return (
+    <TextInput
+      {...props}
+      placeholderTextColor={colors.mutedGray}
+      multiline={multiline}
+      style={[styles.input, multiline && styles.inputMultiline]}
+    />
+  );
+}
+
+function MetricCard({ label, value }: { label: string; value: string }) {
+  return (
+    <View style={styles.metricCard}>
+      <Text style={styles.metricLabel}>{label}</Text>
+      <Text style={styles.metricValue}>{value}</Text>
+    </View>
+  );
+}
+
+function LaunchButton({ label, hint, onPress }: { label: string; hint: string; onPress: () => void }) {
+  return (
+    <TouchableOpacity style={styles.launchButton} onPress={onPress}>
+      <Text style={styles.launchLabel}>{label}</Text>
+      <Text style={styles.launchHint}>{hint}</Text>
+    </TouchableOpacity>
+  );
+}
+
+function ChecklistCard({ title, detail }: { title: string; detail: string }) {
+  return (
+    <ContentCard>
+      <Text style={styles.cardKicker}>CHECK</Text>
+      <Text style={styles.cardTitle}>{title}</Text>
+      <Text style={styles.bodyText}>{detail}</Text>
+    </ContentCard>
+  );
+}
+
+function PulseCard({ post }: { post: PulsePost }) {
+  const realm = realms.find((item) => item.key === post.realmKey) ?? realms[0];
+
+  return (
+    <ContentCard>
+      <Text style={styles.cardKicker}>{realm.shortTitle}</Text>
+      <Text style={styles.cardTitle}>{post.body}</Text>
+      <Text style={styles.bodyText}>{post.author}</Text>
+      <View style={styles.pulseMetaRow}>
+        <Text style={styles.cardMeta}>{post.mood}</Text>
+        <Text style={styles.cardMeta}>{formatRelativeTime(post.createdAt)}</Text>
+      </View>
+      <Text style={styles.cardMeta}>{post.replies} replies</Text>
+    </ContentCard>
+  );
+}
+
+function ToggleRow({
+  label,
+  description,
+  value,
+  onValueChange
+}: {
+  label: string;
+  description: string;
+  value: boolean;
+  onValueChange: (value: boolean) => void;
+}) {
+  return (
+    <View style={styles.toggleRow}>
+      <View style={styles.toggleCopy}>
+        <Text style={styles.toggleLabel}>{label}</Text>
+        <Text style={styles.toggleDescription}>{description}</Text>
+      </View>
+      <Switch
+        value={value}
+        onValueChange={onValueChange}
+        trackColor={{ false: colors.borderBlack, true: colors.sojournRed }}
+        thumbColor={value ? colors.boneWhite : colors.mutedGray}
+      />
+    </View>
+  );
+}
+
+function RealmChipRow({
+  activeRealmKey,
+  onSelect,
+  realmsToShow
+}: {
+  activeRealmKey: RealmKey;
+  onSelect: (realmKey: RealmKey) => void;
+  realmsToShow: RealmKey[];
+}) {
+  return (
+    <View style={styles.realmChipWrap}>
+      {realmsToShow.map((realmKey) => {
+        const realm = realms.find((item) => item.key === realmKey) ?? realms[0];
+        const active = activeRealmKey === realm.key;
+
+        return (
+          <TouchableOpacity
+            key={realm.key}
+            onPress={() => onSelect(realm.key)}
+            style={[styles.realmChip, active && styles.realmChipActive]}
+          >
+            <Text style={styles.realmIcon}>{realm.icon}</Text>
+            <Text style={[styles.realmChipText, active && styles.realmChipTextActive]}>
+              {realm.shortTitle}
+            </Text>
+          </TouchableOpacity>
+        );
+      })}
+    </View>
+  );
+}
+
+function MoodRow({
+  moods,
+  activeMood,
+  onSelect
+}: {
+  moods: readonly string[];
+  activeMood: string;
+  onSelect: (mood: string) => void;
+}) {
+  return (
+    <View style={styles.moodRow}>
+      {moods.map((mood) => {
+        const active = mood === activeMood;
+
+        return (
+          <TouchableOpacity
+            key={mood}
+            onPress={() => onSelect(mood)}
+            style={[styles.moodChip, active && styles.moodChipActive]}
+          >
+            <Text style={[styles.moodChipText, active && styles.moodChipTextActive]}>{mood}</Text>
+          </TouchableOpacity>
+        );
+      })}
+    </View>
+  );
+}
+
+function ContentCard({ children }: { children: React.ReactNode }) {
+  return <View style={styles.contentCard}>{children}</View>;
+}
+
+function Pill({ label }: { label: string }) {
+  return (
+    <View style={styles.pill}>
+      <Text style={styles.pillText}>{label}</Text>
+    </View>
+  );
+}
+
+function SectionTitle({ title, subtitle }: { title: string; subtitle: string }) {
+  return (
+    <View style={styles.sectionTitle}>
+      <Text style={styles.sectionHeading}>{title}</Text>
+      <Text style={styles.sectionSubtitle}>{subtitle}</Text>
+    </View>
+  );
+}
+
+function formatRelativeTime(value: string): string {
+  const date = new Date(value);
+
+  if (Number.isNaN(date.getTime())) {
+    return "just now";
+  }
+
+  const diffMinutes = Math.max(1, Math.floor((Date.now() - date.getTime()) / 60000));
+
+  if (diffMinutes < 60) {
+    return `${diffMinutes}m ago`;
+  }
+
+  const diffHours = Math.floor(diffMinutes / 60);
+
+  if (diffHours < 24) {
+    return `${diffHours}h ago`;
+  }
+
+  return date.toLocaleDateString(undefined, { month: "short", day: "numeric" });
+}
+
+const styles = StyleSheet.create({
+  safe: {
+    flex: 1,
+    backgroundColor: colors.vaultBlack
+  },
+  appShell: {
+    flex: 1,
+    backgroundColor: colors.vaultBlack
+  },
+  content: {
+    padding: spacing.md,
+    paddingBottom: 40
+  },
+  ageGate: {
+    flex: 1,
+    padding: spacing.lg,
+    alignItems: "center",
+    justifyContent: "center",
+    backgroundColor: colors.vaultBlack
+  },
+  glowOrb: {
+    position: "absolute",
+    width: 260,
+    height: 260,
+    borderRadius: 130,
+    backgroundColor: colors.darkRed,
+    opacity: 0.35,
+    top: 90
+  },
+  logoMark: {
+    fontSize: 74,
+    color: colors.crimsonGlow,
+    fontWeight: "900",
+    letterSpacing: 8
+  },
+  title: {
+    color: colors.boneWhite,
+    fontSize: 42,
+    fontWeight: "900",
+    letterSpacing: 1
+  },
+  tagline: {
+    color: colors.mutedGray,
+    fontSize: 16,
+    marginTop: spacing.xs,
+    textAlign: "center"
+  },
+  ageCard: {
+    marginTop: spacing.xl,
+    width: "100%",
+    backgroundColor: colors.cardBlack,
+    borderRadius: radius.lg,
+    padding: spacing.lg,
+    borderWidth: 1,
+    borderColor: colors.darkRed
+  },
+  ageTitle: {
+    color: colors.boneWhite,
+    fontSize: 24,
+    fontWeight: "800",
+    marginBottom: spacing.sm
+  },
+  disclaimer: {
+    color: colors.warning,
+    fontSize: 13,
+    lineHeight: 20,
+    marginTop: spacing.md
+  },
+  primaryButton: {
+    marginTop: spacing.lg,
+    backgroundColor: colors.sojournRed,
+    borderRadius: radius.md,
+    paddingVertical: 15,
+    alignItems: "center"
+  },
+  primaryButtonText: {
+    color: colors.boneWhite,
+    fontWeight: "800",
+    fontSize: 15
+  },
+  footerNote: {
+    color: colors.mutedGray,
+    fontSize: 11,
+    textAlign: "center",
+    marginTop: spacing.lg,
+    lineHeight: 17
+  },
+  header: {
+    paddingHorizontal: spacing.md,
+    paddingTop: spacing.md,
+    paddingBottom: spacing.sm,
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between"
+  },
+  brand: {
+    color: colors.boneWhite,
+    fontSize: 30,
+    fontWeight: "900",
+    letterSpacing: 0.5
+  },
+  headerSub: {
+    color: colors.mutedGray,
+    fontSize: 12,
+    marginTop: 2
+  },
+  vaultBadge: {
+    backgroundColor: colors.darkRed,
+    borderColor: colors.crimsonGlow,
+    borderWidth: 1,
+    paddingHorizontal: 12,
+    paddingVertical: 7,
+    borderRadius: 999
+  },
+  vaultBadgeText: {
+    color: colors.boneWhite,
+    fontSize: 11,
+    fontWeight: "900",
+    letterSpacing: 1.5
+  },
+  nav: {
+    flexDirection: "row",
+    paddingHorizontal: spacing.sm,
+    paddingBottom: spacing.sm,
+    gap: 6
+  },
+  navItem: {
+    flex: 1,
+    paddingVertical: 10,
+    borderRadius: 999,
+    backgroundColor: colors.deepBlack,
+    alignItems: "center",
+    borderWidth: 1,
+    borderColor: colors.borderBlack
+  },
+  navItemActive: {
+    backgroundColor: colors.sojournRed,
+    borderColor: colors.crimsonGlow
+  },
+  navText: {
+    color: colors.mutedGray,
+    fontSize: 11,
+    fontWeight: "700"
+  },
+  navTextActive: {
+    color: colors.boneWhite
+  },
+  heroCard: {
+    backgroundColor: colors.cardBlack,
+    borderRadius: radius.xl,
+    padding: spacing.lg,
+    borderWidth: 1,
+    borderColor: colors.darkRed
+  },
+  heroEyebrow: {
+    color: colors.crimsonGlow,
+    fontSize: 12,
+    fontWeight: "900",
+    letterSpacing: 1.8,
+    marginBottom: spacing.sm
+  },
+  heroTitle: {
+    color: colors.boneWhite,
+    fontSize: 30,
+    lineHeight: 36,
+    fontWeight: "900"
+  },
+  heroBody: {
+    color: colors.softGray,
+    fontSize: 15,
+    lineHeight: 23,
+    marginTop: spacing.md
+  },
+  heroPills: {
+    flexDirection: "row",
+    flexWrap: "wrap",
+    gap: 8,
+    marginTop: spacing.lg
+  },
+  pill: {
+    borderColor: colors.darkRed,
+    borderWidth: 1,
+    borderRadius: 999,
+    paddingHorizontal: 12,
+    paddingVertical: 8,
+    backgroundColor: colors.deepBlack
+  },
+  pillText: {
+    color: colors.boneWhite,
+    fontSize: 12,
+    fontWeight: "700"
+  },
+  sectionTitle: {
+    marginTop: spacing.xl,
+    marginBottom: spacing.md
+  },
+  sectionHeading: {
+    color: colors.boneWhite,
+    fontSize: 23,
+    fontWeight: "900"
+  },
+  sectionSubtitle: {
+    color: colors.mutedGray,
+    fontSize: 14,
+    marginTop: 4,
+    lineHeight: 20
+  },
+  contentCard: {
+    backgroundColor: colors.cardBlack,
+    borderRadius: radius.lg,
+    padding: spacing.md,
+    borderWidth: 1,
+    borderColor: colors.borderBlack,
+    marginBottom: spacing.md
+  },
+  cardKicker: {
+    color: colors.crimsonGlow,
+    fontSize: 11,
+    fontWeight: "900",
+    letterSpacing: 1.4,
+    marginBottom: 8,
+    textTransform: "uppercase"
+  },
+  cardTitle: {
+    color: colors.boneWhite,
+    fontSize: 18,
+    fontWeight: "800",
+    lineHeight: 24
+  },
+  cardMeta: {
+    color: colors.mutedGray,
+    fontSize: 13,
+    marginTop: spacing.sm
+  },
+  bodyText: {
+    color: colors.softGray,
+    fontSize: 14,
+    lineHeight: 22
+  },
+  helperNote: {
+    color: colors.mutedGray,
+    fontSize: 12,
+    lineHeight: 18,
+    marginTop: spacing.sm
+  },
+  metricGrid: {
+    flexDirection: "row",
+    flexWrap: "wrap",
+    gap: spacing.sm
+  },
+  metricCard: {
+    width: "48%",
+    backgroundColor: colors.deepBlack,
+    borderRadius: radius.lg,
+    borderWidth: 1,
+    borderColor: colors.borderBlack,
+    padding: spacing.md
+  },
+  metricLabel: {
+    color: colors.mutedGray,
+    fontSize: 11,
+    textTransform: "uppercase",
+    letterSpacing: 1.1,
+    marginBottom: 6
+  },
+  metricValue: {
+    color: colors.boneWhite,
+    fontSize: 18,
+    fontWeight: "900"
+  },
+  launchRow: {
+    flexDirection: "row",
+    gap: spacing.sm
+  },
+  launchButton: {
+    flex: 1,
+    backgroundColor: colors.deepBlack,
+    borderRadius: radius.lg,
+    borderWidth: 1,
+    borderColor: colors.borderBlack,
+    padding: spacing.md
+  },
+  launchLabel: {
+    color: colors.boneWhite,
+    fontSize: 16,
+    fontWeight: "900"
+  },
+  launchHint: {
+    color: colors.mutedGray,
+    fontSize: 12,
+    lineHeight: 17,
+    marginTop: 6
+  },
+  fieldLabelWrap: {
+    marginBottom: spacing.sm
+  },
+  fieldLabel: {
+    color: colors.boneWhite,
+    fontSize: 14,
+    fontWeight: "800"
+  },
+  fieldHelper: {
+    color: colors.mutedGray,
+    fontSize: 12,
+    lineHeight: 17,
+    marginTop: 4
+  },
+  input: {
+    borderWidth: 1,
+    borderColor: colors.borderBlack,
+    backgroundColor: colors.deepBlack,
+    color: colors.boneWhite,
+    borderRadius: radius.md,
+    paddingHorizontal: spacing.md,
+    paddingVertical: 12,
+    fontSize: 14,
+    marginBottom: spacing.md
+  },
+  inputMultiline: {
+    minHeight: 120,
+    textAlignVertical: "top"
+  },
+  realmSelector: {
+    gap: spacing.sm,
+    paddingBottom: spacing.md
+  },
+  realmChipWrap: {
+    flexDirection: "row",
+    flexWrap: "wrap",
+    gap: spacing.sm,
+    marginBottom: spacing.md
+  },
+  realmChip: {
+    backgroundColor: colors.deepBlack,
+    borderRadius: 999,
+    borderWidth: 1,
+    borderColor: colors.borderBlack,
+    paddingHorizontal: spacing.md,
+    paddingVertical: spacing.sm,
+    alignItems: "center",
+    minWidth: 96
+  },
+  realmChipActive: {
+    backgroundColor: colors.sojournRed,
+    borderColor: colors.crimsonGlow
+  },
+  realmChipText: {
+    color: colors.mutedGray,
+    fontSize: 12,
+    fontWeight: "800"
+  },
+  realmChipTextActive: {
+    color: colors.boneWhite
+  },
+  realmIcon: {
+    color: colors.crimsonGlow,
+    fontSize: 24,
+    marginBottom: 8
+  },
+  realmDetail: {
+    backgroundColor: colors.cardBlack,
+    borderRadius: radius.xl,
+    padding: spacing.lg,
+    borderWidth: 1,
+    borderColor: colors.darkRed,
+    marginBottom: spacing.md
+  },
+  realmDetailIcon: {
+    color: colors.crimsonGlow,
+    fontSize: 38,
+    marginBottom: spacing.sm
+  },
+  realmDetailTitle: {
+    color: colors.boneWhite,
+    fontSize: 28,
+    fontWeight: "900"
+  },
+  realmPromise: {
+    color: colors.crimsonGlow,
+    fontSize: 15,
+    fontWeight: "800",
+    marginTop: spacing.xs,
+    marginBottom: spacing.md
+  },
+  featureList: {
+    marginTop: spacing.md,
+    gap: spacing.sm
+  },
+  featureRow: {
+    flexDirection: "row",
+    alignItems: "flex-start",
+    gap: spacing.sm
+  },
+  featureBullet: {
+    color: colors.crimsonGlow,
+    fontSize: 12,
+    marginTop: 3
+  },
+  featureText: {
+    flex: 1,
+    color: colors.softGray,
+    fontSize: 14,
+    lineHeight: 20
+  },
+  secondaryButton: {
+    marginTop: spacing.lg,
+    borderRadius: radius.md,
+    paddingVertical: 13,
+    alignItems: "center",
+    backgroundColor: colors.deepBlack,
+    borderWidth: 1,
+    borderColor: colors.borderBlack
+  },
+  secondaryButtonDisabled: {
+    opacity: 0.7
+  },
+  secondaryButtonText: {
+    color: colors.boneWhite,
+    fontWeight: "800",
+    fontSize: 14
+  },
+  pulseMetaRow: {
+    flexDirection: "row",
+    justifyContent: "space-between",
+    alignItems: "center",
+    gap: spacing.sm
+  },
+  moodRow: {
+    flexDirection: "row",
+    flexWrap: "wrap",
+    gap: 8,
+    marginBottom: spacing.md
+  },
+  moodChip: {
+    borderColor: colors.darkRed,
+    borderWidth: 1,
+    borderRadius: 999,
+    paddingHorizontal: 12,
+    paddingVertical: 8,
+    backgroundColor: colors.deepBlack
+  },
+  moodChipActive: {
+    backgroundColor: colors.sojournRed,
+    borderColor: colors.crimsonGlow
+  },
+  moodChipText: {
+    color: colors.mutedGray,
+    fontSize: 12,
+    fontWeight: "700"
+  },
+  moodChipTextActive: {
+    color: colors.boneWhite
+  },
+  toggleRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
+    gap: spacing.md,
+    paddingVertical: spacing.sm,
+    marginBottom: spacing.md
+  },
+  toggleCopy: {
+    flex: 1
+  },
+  toggleLabel: {
+    color: colors.boneWhite,
+    fontSize: 14,
+    fontWeight: "800"
+  },
+  toggleDescription: {
+    color: colors.mutedGray,
+    fontSize: 12,
+    lineHeight: 17,
+    marginTop: 4
+  },
+  destructiveButton: {
+    borderColor: colors.darkRed,
+    marginTop: spacing.md
+  },
+  loadingWrap: {
+    flex: 1,
+    alignItems: "center",
+    justifyContent: "center"
+  },
+  loadingKicker: {
+    color: colors.crimsonGlow,
+    fontSize: 12,
+    fontWeight: "900",
+    letterSpacing: 2,
+    marginBottom: spacing.sm
+  },
+  loadingTitle: {
+    color: colors.boneWhite,
+    fontSize: 24,
+    fontWeight: "900"
+  }
+});

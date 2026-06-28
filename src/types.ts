@@ -16,4 +16,32 @@ export type Realm = {
   features: string[];
 };
 
-export type NavTab = "Vault" | "Realms" | "Messages" | "Market" | "Growth";
+export type NavTab = BetaTab;
+
+export type BetaTab = "Home" | "Pulse" | "Realms" | "Journal" | "Settings";
+
+export type BetaProfile = {
+  handle: string;
+  pronouns: string;
+  bio: string;
+  homeRealm: RealmKey;
+  privateMode: boolean;
+  onboardingComplete: boolean;
+};
+
+export type PulsePost = {
+  id: string;
+  author: string;
+  realmKey: RealmKey;
+  mood: string;
+  body: string;
+  createdAt: string;
+  replies: number;
+};
+
+export type JournalEntry = {
+  id: string;
+  mood: string;
+  reflection: string;
+  createdAt: string;
+};

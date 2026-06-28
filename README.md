@@ -60,6 +60,17 @@ This repository currently includes a frontend MVP prototype with:
 - Founder/legal safety notes
 - Mobile-first Expo React Native structure
 
+## Beta Build
+
+The active app entrypoint now launches the first true SojournX beta with:
+
+- Local-only age gate and vault setup
+- Persistent profile, pulse feed, and journal storage on device
+- Realm switching with a home realm selector
+- Private mode toggle for anonymized pulse posting
+- Live feed and growth journal interactions
+- Resettable beta vault state for testing
+
 ## Important Legal / Security Notes
 
 This prototype is a frontend scaffold only.
