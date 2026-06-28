@@ -18,6 +18,13 @@
           "resizeMode": "contain",
           "backgroundColor": "#050505"
         }
+      ],
+      [
+        "expo-contacts",
+        {
+          "contactsPermission": "Allow SojournX to sync trusted contacts into your private vault.",
+          "contactsUsageDescription": "SojournX uses your contacts to build a private trusted circle for the anonymity realm."
+        }
       ]
     ],
     "ios": {

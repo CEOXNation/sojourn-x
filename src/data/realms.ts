@@ -11,10 +11,12 @@ export const realms: Realm[] = [
     promise: "Speak freely without performing.",
     features: [
       "Anonymous posting",
+      "Synced trusted contacts",
       "Topic-based communities",
       "Confessions and questions",
       "Private reflections",
-      "Emotionally intelligent moderation"
+      "Emotionally intelligent moderation",
+      "Signal-like trusted circles"
     ]
   },
   {
@@ -183,6 +185,11 @@ export const realmEnvironments: Record<Realm["key"], RealmEnvironment> = {
         capabilities: ["Anonymous posting", "Topic routing", "Safety filters"]
       },
       {
+        name: "Veiled Contacts",
+        description: "Signal-like contact discovery for trusted people without exposing a public graph.",
+        capabilities: ["Local contact sync", "Invite masking", "Trusted-circle matching"]
+      },
+      {
         name: "Courage Questions",
         description: "Question walls designed for vulnerable conversations and peer support.",
         capabilities: ["Prompt pools", "Community replies", "Context tags"]
@@ -236,7 +243,7 @@ export const realmEnvironments: Record<Realm["key"], RealmEnvironment> = {
       {
         name: "Signal Relay",
         description: "Route interactions from other realms into secure conversation rooms.",
-        capabilities: ["Realm handoff", "Context cards", "Secure replies"]
+        capabilities: ["Realm handoff", "Contact sync", "Secure replies"]
       }
     ],
     blendTargets: ["anonymous", "social", "marketplace"]
