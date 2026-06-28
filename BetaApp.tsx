@@ -90,6 +90,129 @@ const publicSiteUrl = "https://sojournx.xyz";
 
 const logoImage = require("./src/assets/sojournx-logo.png");
 
+// ─── Social Realm — types ─────────────────────────────────────────────────────
+
+type SocialFeedPost = {
+  id: string;
+  type: "post";
+  avatar: string;
+  author: string;
+  handle: string;
+  time: string;
+  body: string;
+  likes: number;
+  comments: number;
+  shares: number;
+};
+
+type SocialFeedVideo = {
+  id: string;
+  type: "video";
+  avatar: string;
+  author: string;
+  handle: string;
+  time: string;
+  thumbnail: string;
+  videoTitle: string;
+  channel: string;
+  views: string;
+  duration: string;
+};
+
+type SocialFeedItem = SocialFeedPost | SocialFeedVideo;
+
+// ─── Social Realm — seed data ─────────────────────────────────────────────────
+
+const socialStories = [
+  { id: "s1", avatar: "✦", name: "Add Story", active: false, mine: true },
+  { id: "s2", avatar: "🌟", name: "Nova K.", active: true },
+  { id: "s3", avatar: "💫", name: "Rei M.", active: true },
+  { id: "s4", avatar: "🌙", name: "Zara T.", active: false },
+  { id: "s5", avatar: "⚡", name: "Kai D.", active: true },
+  { id: "s6", avatar: "🌊", name: "Lyra S.", active: false },
+];
+
+const socialFeedItems: SocialFeedItem[] = [
+  {
+    id: "sf1",
+    type: "post",
+    avatar: "🌟",
+    author: "Nova K.",
+    handle: "@novak",
+    time: "2h ago",
+    body: "The version of you that you keep hiding is the one the world actually needs to see. Stop performing your safety.",
+    likes: 142,
+    comments: 37,
+    shares: 18,
+  },
+  {
+    id: "sf2",
+    type: "video",
+    avatar: "⚡",
+    author: "Kai D.",
+    handle: "@kaid",
+    time: "4h ago",
+    thumbnail: "#3A1F7A",
+    videoTitle: "How I Built My Morning Ritual From Scratch",
+    channel: "Kai D. · Growth",
+    views: "8.2K views",
+    duration: "12:34",
+  },
+  {
+    id: "sf3",
+    type: "post",
+    avatar: "💫",
+    author: "Rei M.",
+    handle: "@reim",
+    time: "6h ago",
+    body: "Soft reminder: your silence has been protecting people who were never protecting you.",
+    likes: 289,
+    comments: 64,
+    shares: 41,
+  },
+  {
+    id: "sf4",
+    type: "video",
+    avatar: "🌙",
+    author: "Zara T.",
+    handle: "@zarat",
+    time: "8h ago",
+    thumbnail: "#1A3A2A",
+    videoTitle: "Shadow Work Practice — 30 Days In",
+    channel: "Zara T. · Spiritual",
+    views: "14.7K views",
+    duration: "22:08",
+  },
+  {
+    id: "sf5",
+    type: "post",
+    avatar: "🌊",
+    author: "Lyra S.",
+    handle: "@lyras",
+    time: "12h ago",
+    body: "Growth isn't always visible. Sometimes it lives in what you stopped tolerating.",
+    likes: 511,
+    comments: 93,
+    shares: 77,
+  },
+];
+
+const socialTrendingVideos = [
+  { id: "tv1", thumbnail: "#2A1A3A", title: "Identity Reset: Starting Over at Any Age", channel: "Soul Archive", views: "42K", duration: "18:22" },
+  { id: "tv2", thumbnail: "#1A2A3A", title: "The Science of Reinvention", channel: "Growth Lab", views: "31K", duration: "24:10" },
+  { id: "tv3", thumbnail: "#3A2A1A", title: "Build an Audience Without Losing Yourself", channel: "Nova K.", views: "19K", duration: "15:45" },
+  { id: "tv4", thumbnail: "#1A3A1A", title: "Daily Rituals of High-Presence People", channel: "Presence Lab", views: "27K", duration: "11:30" },
+];
+
+const socialSuggestedPeople = [
+  { id: "p1", avatar: "🌟", name: "Aria V.", mutual: 12 },
+  { id: "p2", avatar: "🔮", name: "Sol X.", mutual: 7 },
+  { id: "p3", avatar: "🌿", name: "Demi L.", mutual: 3 },
+  { id: "p4", avatar: "☀️", name: "Onyx R.", mutual: 9 },
+];
+
+const socialFeedCategories = ["All", "Following", "Posts", "Videos", "Trending", "Discover"] as const;
+
 const accentPalette: Record<UiAccent, { primary: string; glow: string }> = {
   crimson: { primary: "#B00020", glow: "#FF1744" },
   sunset: { primary: "#D9480F", glow: "#FF7A45" },
@@ -953,77 +1076,81 @@ function RealmsScreen({
         })}
       </ScrollView>
 
-      <View style={[styles.realmDetail, shadow, { borderColor: ui.primaryColor }]}> 
-        <Text style={[styles.realmDetailIcon, { color: ui.glowColor }]}>{selectedRealm.icon}</Text>
-        <Text style={styles.realmDetailTitle}>{selectedRealm.title}</Text>
-        <Text style={[styles.realmPromise, { color: ui.glowColor }]}>{selectedRealm.promise}</Text>
-        <Text style={styles.bodyText}>{selectedRealm.description}</Text>
+      {selectedRealm.key === "social" ? (
+        <SocialRealmView profile={profile} onMakeHome={onMakeHome} />
+      ) : (
+        <View style={[styles.realmDetail, shadow, { borderColor: ui.primaryColor }]}>
+          <Text style={[styles.realmDetailIcon, { color: ui.glowColor }]}>{selectedRealm.icon}</Text>
+          <Text style={styles.realmDetailTitle}>{selectedRealm.title}</Text>
+          <Text style={[styles.realmPromise, { color: ui.glowColor }]}>{selectedRealm.promise}</Text>
+          <Text style={styles.bodyText}>{selectedRealm.description}</Text>
 
-        <ContentCard>
-          <Text style={styles.cardKicker}>ENVIRONMENT MISSION</Text>
-          <Text style={styles.cardTitle}>{environment.mission}</Text>
-          <Text style={styles.bodyText}>{environment.atmosphere}</Text>
-        </ContentCard>
+          <ContentCard>
+            <Text style={styles.cardKicker}>ENVIRONMENT MISSION</Text>
+            <Text style={styles.cardTitle}>{environment.mission}</Text>
+            <Text style={styles.bodyText}>{environment.atmosphere}</Text>
+          </ContentCard>
 
-        <SectionTitle
-          title="Environment Modules"
-          subtitle="Each realm ships with a complete operating environment, not just a single feed."
-        />
+          <SectionTitle
+            title="Environment Modules"
+            subtitle="Each realm ships with a complete operating environment, not just a single feed."
+          />
 
-        {environment.modules.map((module) => (
-          <ContentCard key={module.name}>
-            <Text style={styles.cardKicker}>MODULE</Text>
-            <Text style={styles.cardTitle}>{module.name}</Text>
-            <Text style={styles.bodyText}>{module.description}</Text>
-            <View style={styles.featureList}>
-              {module.capabilities.map((capability) => (
-                <View key={capability} style={styles.featureRow}>
-                  <Text style={[styles.featureBullet, { color: ui.glowColor }]}>◆</Text>
-                  <Text style={styles.featureText}>{capability}</Text>
-                </View>
-              ))}
+          {environment.modules.map((module) => (
+            <ContentCard key={module.name}>
+              <Text style={styles.cardKicker}>MODULE</Text>
+              <Text style={styles.cardTitle}>{module.name}</Text>
+              <Text style={styles.bodyText}>{module.description}</Text>
+              <View style={styles.featureList}>
+                {module.capabilities.map((capability) => (
+                  <View key={capability} style={styles.featureRow}>
+                    <Text style={[styles.featureBullet, { color: ui.glowColor }]}>◆</Text>
+                    <Text style={styles.featureText}>{capability}</Text>
+                  </View>
+                ))}
+              </View>
+            </ContentCard>
+          ))}
+
+          <ContentCard>
+            <Text style={styles.cardKicker}>SEAMLESS BLEND PATHS</Text>
+            <Text style={styles.bodyText}>
+              {ui.blendEnabled
+                ? "Cross-realm transitions are active. Modules can hand off context into connected realms."
+                : "Cross-realm transitions are paused. Realms currently operate in isolated mode."}
+            </Text>
+            <View style={styles.realmChipWrap}>
+              {environment.blendTargets.map((targetKey) => {
+                const target = realms.find((realm) => realm.key === targetKey) ?? realms[0];
+
+                return (
+                  <View key={target.key} style={[styles.realmChip, { borderColor: ui.primaryColor }]}>
+                    <Text style={[styles.realmChipText, { color: colors.boneWhite }]}>{target.shortTitle}</Text>
+                  </View>
+                );
+              })}
             </View>
           </ContentCard>
-        ))}
 
-        <ContentCard>
-          <Text style={styles.cardKicker}>SEAMLESS BLEND PATHS</Text>
-          <Text style={styles.bodyText}>
-            {ui.blendEnabled
-              ? "Cross-realm transitions are active. Modules can hand off context into connected realms."
-              : "Cross-realm transitions are paused. Realms currently operate in isolated mode."}
-          </Text>
-          <View style={styles.realmChipWrap}>
-            {environment.blendTargets.map((targetKey) => {
-              const target = realms.find((realm) => realm.key === targetKey) ?? realms[0];
-
-              return (
-                <View key={target.key} style={[styles.realmChip, { borderColor: ui.primaryColor }]}> 
-                  <Text style={[styles.realmChipText, { color: colors.boneWhite }]}>{target.shortTitle}</Text>
-                </View>
-              );
-            })}
+          <View style={styles.featureList}>
+            {selectedRealm.features.map((feature) => (
+              <View key={feature} style={styles.featureRow}>
+                <Text style={styles.featureBullet}>◆</Text>
+                <Text style={styles.featureText}>{feature}</Text>
+              </View>
+            ))}
           </View>
-        </ContentCard>
 
-        <View style={styles.featureList}>
-          {selectedRealm.features.map((feature) => (
-            <View key={feature} style={styles.featureRow}>
-              <Text style={styles.featureBullet}>◆</Text>
-              <Text style={styles.featureText}>{feature}</Text>
-            </View>
-          ))}
+          <TouchableOpacity
+            style={[styles.secondaryButton, profile.homeRealm === selectedRealm.key && styles.secondaryButtonDisabled]}
+            onPress={() => onMakeHome(selectedRealm.key)}
+          >
+            <Text style={styles.secondaryButtonText}>
+              {profile.homeRealm === selectedRealm.key ? "Home realm selected" : "Make home realm"}
+            </Text>
+          </TouchableOpacity>
         </View>
-
-        <TouchableOpacity
-          style={[styles.secondaryButton, profile.homeRealm === selectedRealm.key && styles.secondaryButtonDisabled]}
-          onPress={() => onMakeHome(selectedRealm.key)}
-        >
-          <Text style={styles.secondaryButtonText}>
-            {profile.homeRealm === selectedRealm.key ? "Home realm selected" : "Make home realm"}
-          </Text>
-        </TouchableOpacity>
-      </View>
+      )}
 
       <ContentCard>
         <Text style={styles.cardKicker}>CATEGORY</Text>
@@ -1033,6 +1160,280 @@ function RealmsScreen({
           is measurable instead of just promised.
         </Text>
       </ContentCard>
+    </View>
+  );
+}
+
+// ─── Social Realm Components ──────────────────────────────────────────────────
+
+function SocialPostCard({ item }: { item: SocialFeedPost }) {
+  const ui = useUiRuntime();
+  const [liked, setLiked] = useState(false);
+
+  return (
+    <View style={[styles.socialPostCard, { borderColor: colors.borderBlack }]}>
+      <View style={styles.socialPostHeader}>
+        <View style={[styles.socialAuthorAvatar, { borderColor: ui.glowColor }]}>
+          <Text style={styles.socialAuthorAvatarText}>{item.avatar}</Text>
+        </View>
+        <View style={styles.socialAuthorInfo}>
+          <Text style={styles.socialAuthorName}>{item.author}</Text>
+          <Text style={styles.socialPostMeta}>{item.handle} · {item.time}</Text>
+        </View>
+        <View style={[styles.socialFollowBadge, { borderColor: ui.primaryColor }]}>
+          <Text style={[styles.socialFollowBadgeText, { color: ui.glowColor }]}>Following</Text>
+        </View>
+      </View>
+
+      <Text style={styles.socialPostBody}>{item.body}</Text>
+
+      <View style={[styles.socialPostStats, { borderTopColor: colors.borderBlack }]}>
+        <Text style={styles.socialStatLabel}>
+          {liked ? item.likes + 1 : item.likes} likes · {item.comments} comments · {item.shares} shares
+        </Text>
+      </View>
+
+      <View style={[styles.socialPostActions, { borderTopColor: colors.borderBlack }]}>
+        <TouchableOpacity
+          style={styles.socialActionBtn}
+          onPress={() => { ui.playUiAction(); setLiked(!liked); }}
+          activeOpacity={0.7}
+        >
+          <Text style={[styles.socialActionIcon, liked && { color: ui.glowColor }]}>♥</Text>
+          <Text style={[styles.socialActionText, liked && { color: ui.glowColor }]}>Like</Text>
+        </TouchableOpacity>
+        <TouchableOpacity style={styles.socialActionBtn} activeOpacity={0.7} onPress={ui.playUiAction}>
+          <Text style={styles.socialActionIcon}>💬</Text>
+          <Text style={styles.socialActionText}>Comment</Text>
+        </TouchableOpacity>
+        <TouchableOpacity style={styles.socialActionBtn} activeOpacity={0.7} onPress={ui.playUiAction}>
+          <Text style={styles.socialActionIcon}>↗</Text>
+          <Text style={styles.socialActionText}>Share</Text>
+        </TouchableOpacity>
+      </View>
+    </View>
+  );
+}
+
+function SocialVideoCard({ item }: { item: SocialFeedVideo }) {
+  const ui = useUiRuntime();
+
+  return (
+    <View style={[styles.socialPostCard, { borderColor: colors.borderBlack }]}>
+      <TouchableOpacity activeOpacity={0.85} style={[styles.videoThumbArea, { backgroundColor: item.thumbnail }]} onPress={ui.playUiAction}>
+        <View style={styles.videoPlayOverlay}>
+          <View style={[styles.videoPlayBtn, { backgroundColor: ui.glowColor }]}>
+            <Text style={styles.videoPlayIcon}>▶</Text>
+          </View>
+        </View>
+        <View style={styles.videoDurationBadge}>
+          <Text style={styles.videoDurationText}>{item.duration}</Text>
+        </View>
+      </TouchableOpacity>
+
+      <View style={styles.videoInfoRow}>
+        <View style={[styles.socialAuthorAvatar, styles.videoChannelAvatar, { borderColor: ui.glowColor }]}>
+          <Text style={styles.socialAuthorAvatarText}>{item.avatar}</Text>
+        </View>
+        <View style={styles.videoInfoText}>
+          <Text style={styles.videoTitle} numberOfLines={2}>{item.videoTitle}</Text>
+          <Text style={styles.videoMeta}>{item.channel} · {item.views} · {item.time}</Text>
+        </View>
+        <TouchableOpacity activeOpacity={0.7}>
+          <Text style={styles.videoMoreDots}>⋮</Text>
+        </TouchableOpacity>
+      </View>
+
+      <View style={[styles.socialPostActions, { borderTopColor: colors.borderBlack }]}>
+        <TouchableOpacity style={styles.socialActionBtn} activeOpacity={0.7} onPress={ui.playUiAction}>
+          <Text style={styles.socialActionIcon}>♥</Text>
+          <Text style={styles.socialActionText}>Like</Text>
+        </TouchableOpacity>
+        <TouchableOpacity style={styles.socialActionBtn} activeOpacity={0.7} onPress={ui.playUiAction}>
+          <Text style={styles.socialActionIcon}>💬</Text>
+          <Text style={styles.socialActionText}>Comment</Text>
+        </TouchableOpacity>
+        <TouchableOpacity style={styles.socialActionBtn} activeOpacity={0.7} onPress={ui.playUiAction}>
+          <Text style={styles.socialActionIcon}>↗</Text>
+          <Text style={styles.socialActionText}>Share</Text>
+        </TouchableOpacity>
+        <TouchableOpacity style={styles.socialActionBtn} activeOpacity={0.7} onPress={ui.playUiAction}>
+          <Text style={[styles.socialActionIcon, { color: ui.glowColor }]}>+</Text>
+          <Text style={styles.socialActionText}>Save</Text>
+        </TouchableOpacity>
+      </View>
+    </View>
+  );
+}
+
+function SocialRealmView({
+  profile,
+  onMakeHome
+}: {
+  profile: BetaProfile;
+  onMakeHome: (realmKey: RealmKey) => void;
+}) {
+  const ui = useUiRuntime();
+  const [activeCategory, setActiveCategory] = useState<string>("All");
+
+  const filteredFeed: SocialFeedItem[] =
+    activeCategory === "Videos"
+      ? socialFeedItems.filter((item): item is SocialFeedVideo => item.type === "video")
+      : activeCategory === "Posts"
+        ? socialFeedItems.filter((item): item is SocialFeedPost => item.type === "post")
+        : socialFeedItems;
+
+  const showTrending = activeCategory === "All" || activeCategory === "Trending" || activeCategory === "Videos";
+  const showPeople = activeCategory === "All" || activeCategory === "Discover";
+
+  return (
+    <View>
+      {/* Stories bar — Facebook style */}
+      <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.storiesBarRow}>
+        <View style={styles.storyItem}>
+          <View style={[styles.storyCircle, { borderColor: ui.glowColor }]}>
+            <Text style={[styles.storyAddPlus, { color: ui.glowColor }]}>+</Text>
+          </View>
+          <Text style={styles.storyLabel} numberOfLines={1}>Add Story</Text>
+        </View>
+        {socialStories.slice(1).map((story) => (
+          <TouchableOpacity key={story.id} style={styles.storyItem} activeOpacity={0.8} onPress={ui.playUiAction}>
+            <View style={[styles.storyCircle, { borderColor: story.active ? ui.glowColor : colors.borderBlack }]}>
+              <Text style={styles.storyEmoji}>{story.avatar}</Text>
+            </View>
+            <Text style={styles.storyLabel} numberOfLines={1}>{story.name}</Text>
+            {story.active && <View style={[styles.storyActiveDot, { backgroundColor: ui.glowColor }]} />}
+          </TouchableOpacity>
+        ))}
+      </ScrollView>
+
+      {/* Post composer — Facebook style */}
+      <View style={[styles.composerCard, { borderColor: colors.borderBlack }]}>
+        <View style={styles.composerRow}>
+          <View style={[styles.composerAvatar, { backgroundColor: ui.primaryColor }]}>
+            <Text style={styles.composerAvatarText}>{profile.avatar || "X"}</Text>
+          </View>
+          <TouchableOpacity
+            style={[styles.composerInputBox, { borderColor: colors.borderBlack }]}
+            activeOpacity={0.7}
+            onPress={ui.playUiAction}
+          >
+            <Text style={styles.composerPlaceholder}>
+              {profile.displayName
+                ? `What's on your mind, ${profile.displayName.split(" ")[0]}?`
+                : "What's on your mind?"}
+            </Text>
+          </TouchableOpacity>
+        </View>
+        <View style={[styles.composerFooter, { borderTopColor: colors.borderBlack }]}>
+          <TouchableOpacity style={styles.composerActionChip} activeOpacity={0.7} onPress={ui.playUiAction}>
+            <Text style={styles.composerActionChipIcon}>▶</Text>
+            <Text style={styles.composerActionChipText}>Live Video</Text>
+          </TouchableOpacity>
+          <View style={styles.composerSep} />
+          <TouchableOpacity style={styles.composerActionChip} activeOpacity={0.7} onPress={ui.playUiAction}>
+            <Text style={styles.composerActionChipIcon}>🖼</Text>
+            <Text style={styles.composerActionChipText}>Photo</Text>
+          </TouchableOpacity>
+          <View style={styles.composerSep} />
+          <TouchableOpacity style={styles.composerActionChip} activeOpacity={0.7} onPress={ui.playUiAction}>
+            <Text style={styles.composerActionChipIcon}>😊</Text>
+            <Text style={styles.composerActionChipText}>Feeling</Text>
+          </TouchableOpacity>
+        </View>
+      </View>
+
+      {/* Category filter chips — YouTube style */}
+      <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.feedCategoryRow}>
+        {socialFeedCategories.map((cat) => (
+          <TouchableOpacity
+            key={cat}
+            onPress={() => { ui.playUiAction(); setActiveCategory(cat); }}
+            style={[styles.feedCategoryChip, activeCategory === cat && styles.feedCategoryChipActive]}
+            activeOpacity={0.8}
+          >
+            <Text style={[styles.feedCategoryText, activeCategory === cat && styles.feedCategoryTextActive]}>
+              {cat}
+            </Text>
+          </TouchableOpacity>
+        ))}
+      </ScrollView>
+
+      {/* Mixed news feed — posts and video cards */}
+      {filteredFeed.map((item) =>
+        item.type === "video"
+          ? <SocialVideoCard key={item.id} item={item} />
+          : <SocialPostCard key={item.id} item={item} />
+      )}
+
+      {/* Trending section — YouTube style */}
+      {showTrending && (
+        <View>
+          <View style={styles.trendingHeaderRow}>
+            <Text style={styles.trendingHeaderTitle}>🔥 Trending in Social</Text>
+            <TouchableOpacity activeOpacity={0.7}>
+              <Text style={[styles.trendingSeeAll, { color: ui.glowColor }]}>See all</Text>
+            </TouchableOpacity>
+          </View>
+          <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.trendingScrollRow}>
+            {socialTrendingVideos.map((video) => (
+              <TouchableOpacity key={video.id} style={styles.trendingVideoCard} activeOpacity={0.85} onPress={ui.playUiAction}>
+                <View style={[styles.trendingVideoThumb, { backgroundColor: video.thumbnail }]}>
+                  <View style={styles.trendingPlayBtn}>
+                    <Text style={styles.trendingPlayIcon}>▶</Text>
+                  </View>
+                  <View style={styles.trendingDurationBadge}>
+                    <Text style={styles.trendingDurationText}>{video.duration}</Text>
+                  </View>
+                </View>
+                <Text style={styles.trendingVideoTitle} numberOfLines={2}>{video.title}</Text>
+                <Text style={styles.trendingVideoChannel}>{video.channel}</Text>
+                <Text style={styles.trendingVideoViews}>{video.views} views</Text>
+              </TouchableOpacity>
+            ))}
+          </ScrollView>
+        </View>
+      )}
+
+      {/* People You May Know — Facebook style */}
+      {showPeople && (
+        <View>
+          <View style={styles.trendingHeaderRow}>
+            <Text style={styles.trendingHeaderTitle}>👥 People You May Know</Text>
+          </View>
+          <ScrollView
+            horizontal
+            showsHorizontalScrollIndicator={false}
+            contentContainerStyle={{ gap: spacing.sm, paddingBottom: spacing.md }}
+          >
+            {socialSuggestedPeople.map((person) => (
+              <View key={person.id} style={[styles.suggestCard, { borderColor: ui.primaryColor }]}>
+                <View style={[styles.suggestAvatar, { borderColor: ui.glowColor }]}>
+                  <Text style={styles.suggestAvatarText}>{person.avatar}</Text>
+                </View>
+                <Text style={styles.suggestName}>{person.name}</Text>
+                <Text style={styles.suggestMutual}>{person.mutual} mutual</Text>
+                <TouchableOpacity
+                  style={[styles.suggestFollowBtn, { backgroundColor: ui.primaryColor }]}
+                  activeOpacity={0.8}
+                  onPress={ui.playUiAction}
+                >
+                  <Text style={styles.suggestFollowText}>Follow</Text>
+                </TouchableOpacity>
+              </View>
+            ))}
+          </ScrollView>
+        </View>
+      )}
+
+      <TouchableOpacity
+        style={[styles.secondaryButton, profile.homeRealm === "social" && styles.secondaryButtonDisabled]}
+        onPress={() => onMakeHome("social")}
+      >
+        <Text style={styles.secondaryButtonText}>
+          {profile.homeRealm === "social" ? "Home realm selected" : "Make home realm"}
+        </Text>
+      </TouchableOpacity>
     </View>
   );
 }
@@ -2354,5 +2755,415 @@ const styles = StyleSheet.create({
     color: colors.boneWhite,
     fontSize: 24,
     fontWeight: "900"
+  },
+
+  // ─── Social Realm styles ─────────────────────────────────────────────────────
+
+  storiesBarRow: {
+    gap: spacing.sm,
+    paddingBottom: spacing.md,
+    paddingTop: spacing.xs
+  },
+  storyItem: {
+    alignItems: "center",
+    width: 68,
+    position: "relative"
+  },
+  storyCircle: {
+    width: 58,
+    height: 58,
+    borderRadius: 29,
+    borderWidth: 2.5,
+    alignItems: "center",
+    justifyContent: "center",
+    backgroundColor: colors.deepBlack,
+    marginBottom: 5
+  },
+  storyAddPlus: {
+    fontSize: 24,
+    fontWeight: "900"
+  },
+  storyEmoji: {
+    fontSize: 24
+  },
+  storyLabel: {
+    color: colors.mutedGray,
+    fontSize: 11,
+    textAlign: "center"
+  },
+  storyActiveDot: {
+    position: "absolute",
+    width: 10,
+    height: 10,
+    borderRadius: 5,
+    bottom: 20,
+    right: 6,
+    borderWidth: 1.5,
+    borderColor: colors.vaultBlack
+  },
+  composerCard: {
+    backgroundColor: colors.cardBlack,
+    borderRadius: radius.lg,
+    borderWidth: 1,
+    marginBottom: spacing.md,
+    overflow: "hidden"
+  },
+  composerRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: spacing.sm,
+    padding: spacing.md
+  },
+  composerAvatar: {
+    width: 40,
+    height: 40,
+    borderRadius: 20,
+    alignItems: "center",
+    justifyContent: "center"
+  },
+  composerAvatarText: {
+    color: colors.boneWhite,
+    fontSize: 16,
+    fontWeight: "900"
+  },
+  composerInputBox: {
+    flex: 1,
+    borderWidth: 1,
+    borderRadius: 999,
+    paddingHorizontal: spacing.md,
+    paddingVertical: 10,
+    backgroundColor: colors.deepBlack
+  },
+  composerPlaceholder: {
+    color: colors.mutedGray,
+    fontSize: 14
+  },
+  composerFooter: {
+    flexDirection: "row",
+    borderTopWidth: 1,
+    paddingVertical: spacing.sm
+  },
+  composerActionChip: {
+    flex: 1,
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "center",
+    gap: 4,
+    paddingVertical: 6
+  },
+  composerActionChipIcon: {
+    fontSize: 14
+  },
+  composerActionChipText: {
+    color: colors.softGray,
+    fontSize: 12,
+    fontWeight: "700"
+  },
+  composerSep: {
+    width: 1,
+    backgroundColor: colors.borderBlack,
+    marginVertical: 4
+  },
+  feedCategoryRow: {
+    gap: spacing.sm,
+    paddingBottom: spacing.sm
+  },
+  feedCategoryChip: {
+    borderRadius: 999,
+    paddingHorizontal: spacing.md,
+    paddingVertical: 7,
+    backgroundColor: colors.deepBlack,
+    borderWidth: 1,
+    borderColor: colors.borderBlack
+  },
+  feedCategoryChipActive: {
+    backgroundColor: colors.boneWhite,
+    borderColor: colors.boneWhite
+  },
+  feedCategoryText: {
+    color: colors.mutedGray,
+    fontSize: 13,
+    fontWeight: "700"
+  },
+  feedCategoryTextActive: {
+    color: colors.vaultBlack
+  },
+  socialPostCard: {
+    backgroundColor: colors.cardBlack,
+    borderRadius: radius.lg,
+    borderWidth: 1,
+    marginBottom: spacing.md,
+    overflow: "hidden"
+  },
+  socialPostHeader: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: spacing.sm,
+    padding: spacing.md
+  },
+  socialAuthorAvatar: {
+    width: 42,
+    height: 42,
+    borderRadius: 21,
+    borderWidth: 2,
+    alignItems: "center",
+    justifyContent: "center",
+    backgroundColor: colors.deepBlack
+  },
+  socialAuthorAvatarText: {
+    fontSize: 18
+  },
+  socialAuthorInfo: {
+    flex: 1
+  },
+  socialAuthorName: {
+    color: colors.boneWhite,
+    fontSize: 14,
+    fontWeight: "800"
+  },
+  socialPostMeta: {
+    color: colors.mutedGray,
+    fontSize: 12,
+    marginTop: 2
+  },
+  socialFollowBadge: {
+    borderWidth: 1,
+    borderRadius: 999,
+    paddingHorizontal: 10,
+    paddingVertical: 4
+  },
+  socialFollowBadgeText: {
+    fontSize: 11,
+    fontWeight: "800"
+  },
+  socialPostBody: {
+    color: colors.softGray,
+    fontSize: 14,
+    lineHeight: 21,
+    paddingHorizontal: spacing.md,
+    paddingBottom: spacing.md
+  },
+  socialPostStats: {
+    borderTopWidth: 1,
+    paddingHorizontal: spacing.md,
+    paddingVertical: 8
+  },
+  socialStatLabel: {
+    color: colors.mutedGray,
+    fontSize: 12
+  },
+  socialPostActions: {
+    flexDirection: "row",
+    borderTopWidth: 1
+  },
+  socialActionBtn: {
+    flex: 1,
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "center",
+    paddingVertical: 10,
+    gap: 4
+  },
+  socialActionIcon: {
+    color: colors.mutedGray,
+    fontSize: 14
+  },
+  socialActionText: {
+    color: colors.mutedGray,
+    fontSize: 12,
+    fontWeight: "700"
+  },
+  videoThumbArea: {
+    height: 190,
+    alignItems: "center",
+    justifyContent: "center"
+  },
+  videoPlayOverlay: {
+    alignItems: "center",
+    justifyContent: "center"
+  },
+  videoPlayBtn: {
+    width: 52,
+    height: 52,
+    borderRadius: 26,
+    alignItems: "center",
+    justifyContent: "center"
+  },
+  videoPlayIcon: {
+    color: colors.vaultBlack,
+    fontSize: 18,
+    fontWeight: "900",
+    marginLeft: 3
+  },
+  videoDurationBadge: {
+    position: "absolute",
+    bottom: 8,
+    right: 10,
+    backgroundColor: "rgba(0,0,0,0.8)",
+    borderRadius: 4,
+    paddingHorizontal: 6,
+    paddingVertical: 2
+  },
+  videoDurationText: {
+    color: colors.boneWhite,
+    fontSize: 12,
+    fontWeight: "700"
+  },
+  videoInfoRow: {
+    flexDirection: "row",
+    alignItems: "flex-start",
+    gap: spacing.sm,
+    padding: spacing.md
+  },
+  videoChannelAvatar: {
+    width: 36,
+    height: 36,
+    borderRadius: 18
+  },
+  videoInfoText: {
+    flex: 1
+  },
+  videoTitle: {
+    color: colors.boneWhite,
+    fontSize: 14,
+    fontWeight: "700",
+    lineHeight: 20,
+    marginBottom: 4
+  },
+  videoMeta: {
+    color: colors.mutedGray,
+    fontSize: 12,
+    lineHeight: 17
+  },
+  videoMoreDots: {
+    color: colors.mutedGray,
+    fontSize: 20,
+    lineHeight: 24
+  },
+  trendingHeaderRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
+    marginBottom: spacing.sm,
+    marginTop: spacing.sm
+  },
+  trendingHeaderTitle: {
+    color: colors.boneWhite,
+    fontSize: 16,
+    fontWeight: "900"
+  },
+  trendingSeeAll: {
+    fontSize: 13,
+    fontWeight: "700"
+  },
+  trendingScrollRow: {
+    gap: spacing.sm,
+    paddingBottom: spacing.md
+  },
+  trendingVideoCard: {
+    width: 180,
+    backgroundColor: colors.cardBlack,
+    borderRadius: radius.md,
+    overflow: "hidden",
+    borderWidth: 1,
+    borderColor: colors.borderBlack
+  },
+  trendingVideoThumb: {
+    height: 100,
+    alignItems: "center",
+    justifyContent: "center"
+  },
+  trendingPlayBtn: {
+    width: 36,
+    height: 36,
+    borderRadius: 18,
+    backgroundColor: "rgba(0,0,0,0.6)",
+    alignItems: "center",
+    justifyContent: "center"
+  },
+  trendingPlayIcon: {
+    color: colors.boneWhite,
+    fontSize: 14,
+    marginLeft: 2
+  },
+  trendingDurationBadge: {
+    position: "absolute",
+    bottom: 6,
+    right: 6,
+    backgroundColor: "rgba(0,0,0,0.8)",
+    borderRadius: 4,
+    paddingHorizontal: 5,
+    paddingVertical: 1
+  },
+  trendingDurationText: {
+    color: colors.boneWhite,
+    fontSize: 10,
+    fontWeight: "700"
+  },
+  trendingVideoTitle: {
+    color: colors.boneWhite,
+    fontSize: 12,
+    fontWeight: "700",
+    lineHeight: 17,
+    padding: 8,
+    paddingBottom: 2
+  },
+  trendingVideoChannel: {
+    color: colors.mutedGray,
+    fontSize: 11,
+    paddingHorizontal: 8,
+    marginTop: 2
+  },
+  trendingVideoViews: {
+    color: colors.mutedGray,
+    fontSize: 10,
+    paddingHorizontal: 8,
+    paddingBottom: 8,
+    marginTop: 2
+  },
+  suggestCard: {
+    width: 140,
+    backgroundColor: colors.cardBlack,
+    borderRadius: radius.lg,
+    borderWidth: 1,
+    padding: spacing.md,
+    alignItems: "center"
+  },
+  suggestAvatar: {
+    width: 54,
+    height: 54,
+    borderRadius: 27,
+    borderWidth: 2,
+    alignItems: "center",
+    justifyContent: "center",
+    backgroundColor: colors.deepBlack,
+    marginBottom: spacing.sm
+  },
+  suggestAvatarText: {
+    fontSize: 22
+  },
+  suggestName: {
+    color: colors.boneWhite,
+    fontSize: 13,
+    fontWeight: "800",
+    marginBottom: 2
+  },
+  suggestMutual: {
+    color: colors.mutedGray,
+    fontSize: 11,
+    textAlign: "center",
+    marginBottom: spacing.sm
+  },
+  suggestFollowBtn: {
+    borderRadius: 999,
+    paddingHorizontal: spacing.md,
+    paddingVertical: 6,
+    width: "100%",
+    alignItems: "center"
+  },
+  suggestFollowText: {
+    color: colors.boneWhite,
+    fontSize: 12,
+    fontWeight: "800"
   }
 });
