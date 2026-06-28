@@ -202,6 +202,24 @@ const socialVideos = [
   }
 ];
 
+const socialDiscoverTags = [
+  "Shadow Thoughts",
+  "Growth Confessions",
+  "Identity Work",
+  "Vault Culture",
+  "Reflection Circle",
+  "Courage Zone"
+];
+
+const socialCircleNames = [
+  "Zara Voss",
+  "Milo Kane",
+  "Reine Sol",
+  "Cleo Night",
+  "Arlo Price",
+  "Sage West"
+];
+
 // ─────────────────────────────────────────────────────────────────────────────
 
 const scaleMap: Record<UiScale, number> = {
@@ -1198,7 +1216,9 @@ function SocialRealmScreen({
         </View>
         <View style={[styles.socialCreateInput, { borderColor: colors.borderBlack }]}>
           <Text style={{ color: colors.mutedGray, fontSize: 14 }}>
-            {profile.displayName ? `What's on your mind, ${profile.displayName.split(" ")[0]}?` : "Share something with your circle…"}
+            {profile.displayName
+              ? `What's on your mind, ${profile.displayName.split(" ")[0]}?`
+              : "Share something with your circle…"}
           </Text>
         </View>
       </View>
@@ -1252,7 +1272,7 @@ function SocialRealmScreen({
           <Text style={styles.cardTitle}>Your Trust Circles</Text>
           <Text style={styles.bodyText}>Friends and followers sorted by trust tier and circle role. Selective reach means only the right people see each layer of you.</Text>
           <View style={[styles.socialFriendGrid]}>
-            {["Zara Voss", "Milo Kane", "Reine Sol", "Cleo Night", "Arlo Price", "Sage West"].map((name) => (
+            {socialCircleNames.map((name) => (
               <View key={name} style={[styles.socialFriendChip, { borderColor: ui.primaryColor }]}>
                 <View style={[styles.socialFriendAvatar, { backgroundColor: ui.primaryColor }]}>
                   <Text style={styles.socialFriendAvatarText}>{name[0]}</Text>
@@ -1272,7 +1292,7 @@ function SocialRealmScreen({
           <Text style={styles.cardTitle}>Find Your People</Text>
           <Text style={styles.bodyText}>Browse realm communities, follow creators, and discover circles aligned with your identity — without the noise of algorithmic feeds.</Text>
           <View style={[styles.socialDiscoverTagWrap]}>
-            {["Shadow Thoughts", "Growth Confessions", "Identity Work", "Vault Culture", "Reflection Circle", "Courage Zone"].map((tag) => (
+            {socialDiscoverTags.map((tag) => (
               <TouchableOpacity key={tag} style={[styles.socialDiscoverTag, { borderColor: ui.primaryColor }]} activeOpacity={0.75}>
                 <Text style={[styles.socialDiscoverTagText, { color: ui.glowColor }]}># {tag}</Text>
               </TouchableOpacity>
