@@ -1045,16 +1045,42 @@ function RealmsScreen({
 
 function SpiritualOracleSuite() {
   const ui = useUiRuntime();
-  const [activeTarot, setActiveTarot] = useState(spiritualTarotDeck[0]);
-  const [activeRune, setActiveRune] = useState(spiritualRuneSet[0]);
+  const fallbackTarot = {
+    name: "Deck Offline",
+    arcana: "Major Arcana",
+    intendedMeaning: "Tarot codex is syncing. Return shortly for symbolic guidance.",
+    light: "Pause and breathe.",
+    shadow: "Rushing without reflection.",
+    embodiment: "Ground first, then pull."
+  };
+  const fallbackRune = {
+    name: "Set Offline",
+    symbol: "ᛟ",
+    intendedMeaning: "Rune matrix is syncing. Return shortly for northern wisdom.",
+    light: "Stay receptive.",
+    shadow: "Forcing certainty.",
+    embodiment: "Hold center and wait for clarity."
+  };
+  const [activeTarot, setActiveTarot] = useState(spiritualTarotDeck[0] ?? fallbackTarot);
+  const [activeRune, setActiveRune] = useState(spiritualRuneSet[0] ?? fallbackRune);
 
   const pullTarot = () => {
+    if (spiritualTarotDeck.length === 0) {
+      setActiveTarot(fallbackTarot);
+      return;
+    }
+
     const nextCard = spiritualTarotDeck[Math.floor(Math.random() * spiritualTarotDeck.length)];
     setActiveTarot(nextCard);
     ui.playUiAction();
   };
 
   const pullRune = () => {
+    if (spiritualRuneSet.length === 0) {
+      setActiveRune(fallbackRune);
+      return;
+    }
+
     const nextRune = spiritualRuneSet[Math.floor(Math.random() * spiritualRuneSet.length)];
     setActiveRune(nextRune);
     ui.playUiAction();
