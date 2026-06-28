@@ -1061,8 +1061,12 @@ function SpiritualOracleSuite() {
     shadow: "Forcing certainty.",
     embodiment: "Hold center and wait for clarity."
   };
-  const [activeTarot, setActiveTarot] = useState(spiritualTarotDeck[0] ?? fallbackTarot);
-  const [activeRune, setActiveRune] = useState(spiritualRuneSet[0] ?? fallbackRune);
+  const [activeTarot, setActiveTarot] = useState(
+    spiritualTarotDeck.length > 0 ? spiritualTarotDeck[0] : fallbackTarot
+  );
+  const [activeRune, setActiveRune] = useState(
+    spiritualRuneSet.length > 0 ? spiritualRuneSet[0] : fallbackRune
+  );
 
   const pullTarot = () => {
     if (spiritualTarotDeck.length === 0) {
