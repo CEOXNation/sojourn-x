@@ -7,7 +7,9 @@ function hoursAgo(hours: number): string {
   return new Date(startedAt - hours * 60 * 60 * 1000).toISOString();
 }
 
-export const betaTabs = ["Home", "Pulse", "Realms", "Journal", "Settings"] as const;
+export const betaTabs = ["Home", "Pulse", "Realms", "Journal", "Profile", "Settings"] as const;
+
+export const betaAvatarOptions = ["X", "✦", "◈", "☽", "⚡", "△", "☉", "⬡", "❖", "⟡"] as const;
 
 export const betaMoods = [
   "Grounded",

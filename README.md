@@ -71,6 +71,9 @@ The active app entrypoint now launches the first true SojournX beta with:
 - Seamless blend mode toggle for cross-realm environment handoff behavior
 - Private mode toggle for anonymized pulse posting
 - Customizable UI engine with accent color, interface style, and UI size presets
+- Advanced interface controls for layout density and corner style
+- Dedicated Profile Studio with avatar presets, status, identity fields, and completion scoring
+- Realm-responsive visual themes that shift by active environment
 - Live feed and growth journal interactions
 - Resettable beta vault state for testing
 

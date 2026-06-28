@@ -13,7 +13,15 @@ import {
   View
 } from "react-native";
 
-import { betaChecklist, betaJournalSeed, betaMoods, betaPulseSeed, betaRealmPreviewOrder, betaTabs } from "./src/data/beta";
+import {
+  betaAvatarOptions,
+  betaChecklist,
+  betaJournalSeed,
+  betaMoods,
+  betaPulseSeed,
+  betaRealmPreviewOrder,
+  betaTabs
+} from "./src/data/beta";
 import { realmEnvironments, realms } from "./src/data/realms";
 import { clearKeys, createId, loadJson, saveJson } from "./src/storage";
 import { colors, radius, shadow, spacing } from "./src/theme";
@@ -26,6 +34,8 @@ import type {
   RealmEnvironment,
   RealmKey,
   UiAccent,
+  UiCorners,
+  UiDensity,
   UiPreferences,
   UiScale,
   UiStylePreset
@@ -40,9 +50,14 @@ const STORAGE_KEYS = {
 } as const;
 
 const defaultProfile: BetaProfile = {
+  displayName: "",
   handle: "",
+  avatar: "X",
+  status: "Emerging",
   pronouns: "they/them",
   bio: "",
+  location: "",
+  website: "",
   homeRealm: "anonymous",
   privateMode: true,
   onboardingComplete: false
@@ -53,7 +68,9 @@ const defaultPulseMood = betaMoods[0];
 const defaultUiPreferences: UiPreferences = {
   accent: "crimson",
   style: "vault",
-  scale: "balanced"
+  scale: "balanced",
+  density: "balanced",
+  corners: "balanced"
 };
 
 const accentPalette: Record<UiAccent, { primary: string; glow: string }> = {
@@ -70,6 +87,27 @@ const scaleMap: Record<UiScale, number> = {
   immersive: 1.12
 };
 
+const densityMap: Record<UiDensity, number> = {
+  cozy: 1.1,
+  balanced: 1,
+  dense: 0.88
+};
+
+const cornerMap: Record<UiCorners, number> = {
+  soft: 1.2,
+  balanced: 1,
+  sharp: 0.7
+};
+
+const realmVisualThemes: Record<RealmKey, { background: string; wash: string; orb: string }> = {
+  anonymous: { background: "#090A12", wash: "rgba(118,88,255,0.16)", orb: "#6D28D9" },
+  social: { background: "#0D0B12", wash: "rgba(255,111,97,0.18)", orb: "#EA580C" },
+  messaging: { background: "#071015", wash: "rgba(56,189,248,0.17)", orb: "#0284C7" },
+  marketplace: { background: "#11110A", wash: "rgba(250,204,21,0.16)", orb: "#CA8A04" },
+  spiritual: { background: "#0A0E15", wash: "rgba(148,163,255,0.18)", orb: "#6366F1" },
+  growth: { background: "#0A120D", wash: "rgba(34,197,94,0.16)", orb: "#16A34A" }
+};
+
 type UiRuntime = {
   preferences: UiPreferences;
   setPreferences: React.Dispatch<React.SetStateAction<UiPreferences>>;
@@ -78,6 +116,9 @@ type UiRuntime = {
   primaryColor: string;
   glowColor: string;
   scale: number;
+  density: number;
+  cornerScale: number;
+  activeRealmTheme: { background: string; wash: string; orb: string };
 };
 
 const UiRuntimeContext = React.createContext<UiRuntime | null>(null);
@@ -93,7 +134,10 @@ function useUiRuntime(): UiRuntime {
       setBlendEnabled: () => undefined,
       primaryColor: accentPalette.crimson.primary,
       glowColor: accentPalette.crimson.glow,
-      scale: 1
+      scale: 1,
+      density: 1,
+      cornerScale: 1,
+      activeRealmTheme: realmVisualThemes.anonymous
     };
   }
 
@@ -196,6 +240,17 @@ export default function BetaApp() {
   const primaryColor = accentPalette[uiPreferences.accent].primary;
   const glowColor = accentPalette[uiPreferences.accent].glow;
   const uiScale = scaleMap[uiPreferences.scale];
+  const density = densityMap[uiPreferences.density];
+  const cornerScale = cornerMap[uiPreferences.corners];
+
+  const activeRealmKey: RealmKey =
+    activeTab === "Realms"
+      ? selectedRealmKey
+      : activeTab === "Pulse"
+        ? pulseRealmKey
+        : profile.homeRealm;
+
+  const activeRealmTheme = realmVisualThemes[activeRealmKey];
 
   const uiRuntime = useMemo(
     () => ({
@@ -205,9 +260,12 @@ export default function BetaApp() {
       setBlendEnabled,
       primaryColor,
       glowColor,
-      scale: uiScale
+      scale: uiScale,
+      density,
+      cornerScale,
+      activeRealmTheme
     }),
-    [uiPreferences, blendEnabled, primaryColor, glowColor, uiScale]
+    [uiPreferences, blendEnabled, primaryColor, glowColor, uiScale, density, cornerScale, activeRealmTheme]
   );
 
   const betaMetrics = useMemo(
@@ -236,16 +294,20 @@ export default function BetaApp() {
     );
   } else {
     content = (
-      <SafeAreaView style={[styles.safe, { backgroundColor: colors.vaultBlack }]}>
+      <SafeAreaView style={[styles.safe, { backgroundColor: activeRealmTheme.background }]}>
         <StatusBar barStyle="light-content" />
 
-        <View style={styles.appShell}>
+        <View style={[styles.appShell, { backgroundColor: activeRealmTheme.background }]}> 
+          <View style={[styles.realmThemeWash, { backgroundColor: activeRealmTheme.wash }]} />
           <Header profile={profile} />
           <Nav activeTab={activeTab} setActiveTab={setActiveTab} />
 
           <ScrollView
             showsVerticalScrollIndicator={false}
-            contentContainerStyle={[styles.content, { padding: Math.round(spacing.md * uiScale) }]}
+            contentContainerStyle={[
+              styles.content,
+              { padding: Math.round(spacing.md * uiScale * density), paddingBottom: Math.round(40 * density) }
+            ]}
           >
             {activeTab === "Home" && (
               <HomeScreen
@@ -278,7 +340,9 @@ export default function BetaApp() {
 
                 const nextPost: PulsePost = {
                   id: createId("pulse"),
-                  author: profile.privateMode ? "Anonymous" : profile.handle || "Vault Member",
+                  author: profile.privateMode
+                    ? "Anonymous"
+                    : `${profile.avatar} ${profile.displayName || profile.handle || "Vault Member"}`,
                   realmKey: pulseRealmKey,
                   mood: pulseMood,
                   body,
@@ -329,6 +393,15 @@ export default function BetaApp() {
               }}
             />
           )}
+
+            {activeTab === "Profile" && (
+              <ProfileScreen
+                profile={profile}
+                setProfile={setProfile}
+                posts={posts}
+                entries={journalEntries}
+              />
+            )}
 
             {activeTab === "Settings" && (
               <SettingsScreen
@@ -441,7 +514,13 @@ function BetaSetup({
 
       <ScrollView
         showsVerticalScrollIndicator={false}
-        contentContainerStyle={[styles.content, { padding: Math.round(spacing.md * ui.scale) }]}
+        contentContainerStyle={[
+          styles.content,
+          {
+            padding: Math.round(spacing.md * ui.scale * ui.density),
+            paddingBottom: Math.round(40 * ui.density)
+          }
+        ]}
       >
         <View style={[styles.heroCard, shadow, { borderColor: ui.primaryColor }]}> 
           <Text style={styles.heroEyebrow}>BETA SETUP</Text>
@@ -452,6 +531,20 @@ function BetaSetup({
         </View>
 
         <ContentCard>
+          <FieldLabel label="Avatar" helper="Choose a symbol that represents your current identity." />
+          <SelectionRow<string>
+            items={betaAvatarOptions.map((avatar) => ({ key: avatar, label: avatar }))}
+            value={profile.avatar}
+            onSelect={(avatar) => setProfile((current) => ({ ...current, avatar }))}
+          />
+
+          <FieldLabel label="Display Name" helper="How your profile is shown throughout the app." />
+          <InputField
+            value={profile.displayName}
+            onChangeText={(displayName) => setProfile((current) => ({ ...current, displayName }))}
+            placeholder="Astra Vale"
+          />
+
           <FieldLabel label="Handle" helper="How the beta will address you." />
           <InputField
             value={profile.handle}
@@ -505,11 +598,18 @@ function Header({ profile }: { profile: BetaProfile }) {
     <View style={styles.header}>
       <View>
         <Text style={styles.brand}>SojournX Beta</Text>
-        <Text style={styles.headerSub}>Local-first multi-realm identity platform</Text>
+        <Text style={styles.headerSub}>
+          {(profile.displayName || profile.handle || "Vault member") + " · Local-first multi-realm identity platform"}
+        </Text>
       </View>
 
-      <View style={[styles.vaultBadge, { borderColor: ui.glowColor, backgroundColor: ui.primaryColor }]}> 
-        <Text style={styles.vaultBadgeText}>{profile.privateMode ? "PRIVATE" : "OPEN"}</Text>
+      <View style={[styles.headerRight]}>
+        <View style={[styles.profileAvatarMini, { backgroundColor: ui.primaryColor }]}>
+          <Text style={styles.profileAvatarMiniText}>{profile.avatar || "X"}</Text>
+        </View>
+        <View style={[styles.vaultBadge, { borderColor: ui.glowColor, backgroundColor: ui.primaryColor }]}> 
+          <Text style={styles.vaultBadgeText}>{profile.privateMode ? "PRIVATE" : "OPEN"}</Text>
+        </View>
       </View>
     </View>
   );
@@ -569,7 +669,9 @@ function HomeScreen({
     <View>
       <View style={[styles.heroCard, shadow]}>
         <Text style={styles.heroEyebrow}>BETA HOME</Text>
-        <Text style={styles.heroTitle}>Welcome back, {profile.handle || "Vault member"}.</Text>
+        <Text style={styles.heroTitle}>
+          Welcome back, {profile.displayName || profile.handle || "Vault member"}.
+        </Text>
         <Text style={styles.heroBody}>
           Your default realm is {homeRealm.title}. The local beta now remembers your identity,
           pulse feed, and journal on this device.
@@ -858,6 +960,141 @@ function JournalScreen({
   );
 }
 
+function ProfileScreen({
+  profile,
+  setProfile,
+  posts,
+  entries
+}: {
+  profile: BetaProfile;
+  setProfile: React.Dispatch<React.SetStateAction<BetaProfile>>;
+  posts: PulsePost[];
+  entries: JournalEntry[];
+}) {
+  const ui = useUiRuntime();
+
+  const completion = [
+    profile.displayName,
+    profile.handle,
+    profile.pronouns,
+    profile.bio,
+    profile.location,
+    profile.website,
+    profile.status
+  ].filter((value) => value.trim().length > 0).length;
+
+  const completionPct = Math.round((completion / 7) * 100);
+
+  return (
+    <View>
+      <SectionTitle title="Profile Studio" subtitle="Build a complete identity before pre-release." />
+
+      <ContentCard>
+        <Text style={styles.cardKicker}>AVATAR</Text>
+        <View style={styles.avatarRow}>
+          {betaAvatarOptions.map((avatar) => {
+            const active = profile.avatar === avatar;
+
+            return (
+              <TouchableOpacity
+                key={avatar}
+                style={[
+                  styles.avatarChip,
+                  active && { borderColor: ui.glowColor, backgroundColor: ui.primaryColor }
+                ]}
+                onPress={() => setProfile((current) => ({ ...current, avatar }))}
+              >
+                <Text style={styles.avatarChipText}>{avatar}</Text>
+              </TouchableOpacity>
+            );
+          })}
+        </View>
+      </ContentCard>
+
+      <ContentCard>
+        <FieldLabel label="Display Name" helper="Primary name shown across profile surfaces." />
+        <InputField
+          value={profile.displayName}
+          onChangeText={(displayName) => setProfile((current) => ({ ...current, displayName }))}
+          placeholder="Astra Vale"
+        />
+
+        <FieldLabel label="Handle" helper="Unique public identity tag." />
+        <InputField
+          value={profile.handle}
+          onChangeText={(handle) => setProfile((current) => ({ ...current, handle }))}
+          placeholder="vaultwalker"
+        />
+
+        <FieldLabel label="Status" helper="Current state line shown under your name." />
+        <InputField
+          value={profile.status}
+          onChangeText={(status) => setProfile((current) => ({ ...current, status }))}
+          placeholder="Rebuilding in public"
+        />
+
+        <FieldLabel label="Pronouns" helper="Optional identity marker." />
+        <InputField
+          value={profile.pronouns}
+          onChangeText={(pronouns) => setProfile((current) => ({ ...current, pronouns }))}
+          placeholder="they/them"
+        />
+
+        <FieldLabel label="Location" helper="Optional city, country, or region." />
+        <InputField
+          value={profile.location}
+          onChangeText={(location) => setProfile((current) => ({ ...current, location }))}
+          placeholder="Lisbon, PT"
+        />
+
+        <FieldLabel label="Website" helper="Optional profile link." />
+        <InputField
+          value={profile.website}
+          onChangeText={(website) => setProfile((current) => ({ ...current, website }))}
+          placeholder="https://sojournx.app/me"
+        />
+
+        <FieldLabel label="Bio" helper="Tell people who you are becoming." />
+        <InputField
+          value={profile.bio}
+          onChangeText={(bio) => setProfile((current) => ({ ...current, bio }))}
+          placeholder="Designing a more intentional social future."
+          multiline
+        />
+      </ContentCard>
+
+      <ContentCard>
+        <Text style={styles.cardKicker}>PROFILE PREVIEW</Text>
+        <View style={[styles.profilePreview, { borderColor: ui.primaryColor }]}> 
+          <View style={styles.profilePreviewHeader}>
+            <View style={[styles.profileAvatar, { backgroundColor: ui.primaryColor }]}>
+              <Text style={styles.profileAvatarText}>{profile.avatar}</Text>
+            </View>
+            <View style={styles.profileIdentityBlock}>
+              <Text style={styles.cardTitle}>{profile.displayName || "Unnamed"}</Text>
+              <Text style={styles.cardMeta}>@{profile.handle || "handle"}</Text>
+              <Text style={styles.bodyText}>{profile.status || "Set a profile status"}</Text>
+            </View>
+          </View>
+          <View style={styles.featureList}>
+            <Text style={styles.featureText}>Pronouns: {profile.pronouns || "-"}</Text>
+            <Text style={styles.featureText}>Location: {profile.location || "-"}</Text>
+            <Text style={styles.featureText}>Website: {profile.website || "-"}</Text>
+            <Text style={styles.featureText}>Bio: {profile.bio || "-"}</Text>
+          </View>
+        </View>
+      </ContentCard>
+
+      <View style={styles.metricGrid}>
+        <MetricCard label="Completion" value={`${completionPct}%`} />
+        <MetricCard label="Pulses" value={String(posts.length)} />
+        <MetricCard label="Entries" value={String(entries.length)} />
+        <MetricCard label="Home Realm" value={profile.homeRealm} />
+      </View>
+    </View>
+  );
+}
+
 function SettingsScreen({
   profile,
   setProfile,
@@ -953,6 +1190,28 @@ function SettingsScreen({
           onSelect={(scale) => ui.setPreferences((current) => ({ ...current, scale }))}
         />
 
+        <FieldLabel label="Layout Density" helper="Control spacing intensity across the interface." />
+        <SelectionRow<UiDensity>
+          items={[
+            { key: "cozy", label: "Cozy" },
+            { key: "balanced", label: "Balanced" },
+            { key: "dense", label: "Dense" }
+          ]}
+          value={ui.preferences.density}
+          onSelect={(density) => ui.setPreferences((current) => ({ ...current, density }))}
+        />
+
+        <FieldLabel label="Corner Style" helper="Choose how rounded cards and controls should feel." />
+        <SelectionRow<UiCorners>
+          items={[
+            { key: "soft", label: "Soft" },
+            { key: "balanced", label: "Balanced" },
+            { key: "sharp", label: "Sharp" }
+          ]}
+          value={ui.preferences.corners}
+          onSelect={(corners) => ui.setPreferences((current) => ({ ...current, corners }))}
+        />
+
         <FieldLabel label="Realm Blend" helper="Let environments hand off context between connected realms." />
         <ToggleRow
           label={ui.blendEnabled ? "Blend Enabled" : "Blend Disabled"}
@@ -1005,7 +1264,8 @@ function InputField({
         multiline && styles.inputMultiline,
         {
           borderColor: ui.preferences.style === "glass" ? "rgba(255,255,255,0.25)" : colors.borderBlack,
-          fontSize: 14 * ui.scale
+          fontSize: 14 * ui.scale,
+          borderRadius: Math.round(radius.md * ui.cornerScale)
         }
       ]}
     />
@@ -1023,7 +1283,8 @@ function PrimaryButton({ label, onPress }: { label: string; onPress: () => void 
           backgroundColor: ui.primaryColor,
           borderColor: ui.glowColor,
           borderWidth: ui.preferences.style === "mono" ? 1 : 0,
-          paddingVertical: Math.round(15 * ui.scale)
+          paddingVertical: Math.round(15 * ui.scale * ui.density),
+          borderRadius: Math.round(radius.md * ui.cornerScale)
         }
       ]}
       onPress={onPress}
@@ -1232,7 +1493,17 @@ function ContentCard({ children }: { children: React.ReactNode }) {
           };
 
   return (
-    <View style={[styles.contentCard, cardPreset, { padding: Math.round(spacing.md * ui.scale) }]}>
+    <View
+      style={[
+        styles.contentCard,
+        cardPreset,
+        {
+          padding: Math.round(spacing.md * ui.scale * ui.density),
+          borderRadius: Math.round(radius.lg * ui.cornerScale),
+          marginBottom: Math.round(spacing.md * ui.density)
+        }
+      ]}
+    >
       {children}
     </View>
   );
@@ -1287,6 +1558,15 @@ const styles = StyleSheet.create({
   appShell: {
     flex: 1,
     backgroundColor: colors.vaultBlack
+  },
+  realmThemeWash: {
+    position: "absolute",
+    width: 260,
+    height: 260,
+    borderRadius: 130,
+    right: -40,
+    top: 14,
+    opacity: 0.9
   },
   content: {
     padding: spacing.md,
@@ -1373,6 +1653,23 @@ const styles = StyleSheet.create({
     flexDirection: "row",
     alignItems: "center",
     justifyContent: "space-between"
+  },
+  headerRight: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: spacing.sm
+  },
+  profileAvatarMini: {
+    width: 32,
+    height: 32,
+    borderRadius: 16,
+    alignItems: "center",
+    justifyContent: "center"
+  },
+  profileAvatarMiniText: {
+    color: colors.boneWhite,
+    fontSize: 14,
+    fontWeight: "900"
   },
   brand: {
     color: colors.boneWhite,
@@ -1523,6 +1820,55 @@ const styles = StyleSheet.create({
     fontSize: 12,
     lineHeight: 18,
     marginTop: spacing.sm
+  },
+  avatarRow: {
+    flexDirection: "row",
+    flexWrap: "wrap",
+    gap: spacing.sm,
+    marginBottom: spacing.sm
+  },
+  avatarChip: {
+    width: 52,
+    height: 52,
+    borderRadius: 26,
+    borderWidth: 1,
+    borderColor: colors.borderBlack,
+    backgroundColor: colors.deepBlack,
+    alignItems: "center",
+    justifyContent: "center"
+  },
+  avatarChipText: {
+    color: colors.boneWhite,
+    fontSize: 18,
+    fontWeight: "800"
+  },
+  profilePreview: {
+    borderWidth: 1,
+    borderColor: colors.borderBlack,
+    borderRadius: radius.lg,
+    padding: spacing.md,
+    backgroundColor: colors.deepBlack
+  },
+  profilePreviewHeader: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: spacing.md,
+    marginBottom: spacing.md
+  },
+  profileAvatar: {
+    width: 64,
+    height: 64,
+    borderRadius: 32,
+    alignItems: "center",
+    justifyContent: "center"
+  },
+  profileAvatarText: {
+    color: colors.boneWhite,
+    fontSize: 26,
+    fontWeight: "900"
+  },
+  profileIdentityBlock: {
+    flex: 1
   },
   metricGrid: {
     flexDirection: "row",
