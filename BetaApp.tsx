@@ -42,6 +42,7 @@ import {
 } from "./src/storage";
 import { colors, radius, shadow, spacing } from "./src/theme";
 import { Analytics } from "@vercel/analytics/react";
+import { SpeedInsights } from "@vercel/speed-insights/react";
 import type {
   BetaProfile,
   BetaTab,
@@ -661,7 +662,12 @@ export default function BetaApp() {
   return (
     <UiRuntimeContext.Provider value={uiRuntime}>
       {content}
-      {Platform.OS === "web" && <Analytics />}
+      {Platform.OS === "web" && (
+        <>
+          <Analytics />
+          <SpeedInsights />
+        </>
+      )}
     </UiRuntimeContext.Provider>
   );
 }
