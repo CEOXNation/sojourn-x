@@ -911,6 +911,252 @@ function PulseScreen({
   );
 }
 
+// ─── Messaging Realm Mock Data ───────────────────────────────────────────────
+
+const MSG_CONVERSATIONS = [
+  {
+    id: "c1",
+    initials: "VG",
+    name: "Vault Ghost",
+    preview: "the signal dropped mid-relay, try again at midnight",
+    time: "11:58 PM",
+    unread: true,
+    burn: true
+  },
+  {
+    id: "c2",
+    initials: "EV",
+    name: "Echo Vale",
+    preview: "Encrypted note received. Open before sunrise.",
+    time: "9:14 AM",
+    unread: true,
+    burn: false
+  },
+  {
+    id: "c3",
+    initials: "NX",
+    name: "Nyx Veil",
+    preview: "Identity confirmed. Vault key synced.",
+    time: "Yesterday",
+    unread: false,
+    burn: false
+  },
+  {
+    id: "c4",
+    initials: "SR",
+    name: "Silent Relay #7",
+    preview: "Auto-relay standing by. No new messages.",
+    time: "Mon",
+    unread: false,
+    burn: true
+  },
+  {
+    id: "c5",
+    initials: "SB",
+    name: "Sable Rune",
+    preview: "The shadows speak in encoded glyphs tonight",
+    time: "Sun",
+    unread: false,
+    burn: false
+  }
+] as const;
+
+const MSG_SECRET_GROUPS = [
+  {
+    id: "g1",
+    icon: "🕯️",
+    name: "Ember Conclave",
+    members: 7,
+    lastActivity: "3 min ago"
+  },
+  {
+    id: "g2",
+    icon: "🌑",
+    name: "Obsidian Fold",
+    members: 12,
+    lastActivity: "1 hr ago"
+  },
+  {
+    id: "g3",
+    icon: "🔮",
+    name: "Null Signal Cell",
+    members: 4,
+    lastActivity: "Yesterday"
+  }
+] as const;
+
+type MsgTab = "dm" | "groups" | "relay";
+
+function MessagingRealmView({
+  profile,
+  onMakeHome
+}: {
+  profile: BetaProfile;
+  onMakeHome: (realmKey: RealmKey) => void;
+}) {
+  const ui = useUiRuntime();
+  const [activeTab, setActiveTab] = useState<MsgTab>("dm");
+
+  const tabs: { key: MsgTab; label: string }[] = [
+    { key: "dm", label: "Direct Messages" },
+    { key: "groups", label: "Secret Groups" },
+    { key: "relay", label: "Voice Relay" }
+  ];
+
+  return (
+    <View style={styles.realmDetail}>
+      {/* Status banner */}
+      <View style={[styles.msgStatusBanner, { borderColor: ui.glowColor }]}>
+        <Text style={[styles.msgStatusBannerText, { color: ui.glowColor }]}>
+          🔒 End-to-end encrypted · Vault-secured · Self-destruct ready
+        </Text>
+      </View>
+
+      {/* Decorative search bar */}
+      <TouchableOpacity
+        activeOpacity={ui.actionOpacity}
+        onPress={() => ui.playUiAction()}
+        style={[styles.msgSearchBar, { borderColor: colors.borderBlack }]}
+      >
+        <Text style={styles.msgSearchIcon}>🔍</Text>
+        <Text style={styles.msgSearchPlaceholder}>Search conversations...</Text>
+      </TouchableOpacity>
+
+      {/* Tabs row */}
+      <View style={styles.msgTabRow}>
+        {tabs.map((tab) => {
+          const active = activeTab === tab.key;
+          return (
+            <TouchableOpacity
+              key={tab.key}
+              activeOpacity={ui.actionOpacity}
+              onPress={() => { ui.playUiAction(); setActiveTab(tab.key); }}
+              style={[
+                styles.msgTab,
+                active && { backgroundColor: ui.primaryColor, borderColor: ui.glowColor }
+              ]}
+            >
+              <Text style={[styles.msgTabText, active && styles.msgTabTextActive]}>
+                {tab.label}
+              </Text>
+            </TouchableOpacity>
+          );
+        })}
+      </View>
+
+      {/* DM conversation list */}
+      {activeTab === "dm" && (
+        <View>
+          {MSG_CONVERSATIONS.map((convo) => (
+            <TouchableOpacity
+              key={convo.id}
+              activeOpacity={ui.actionOpacity}
+              onPress={() => ui.playUiAction()}
+              style={styles.msgConvoRow}
+            >
+              <View style={[
+                styles.msgAvatar,
+                { borderColor: convo.unread ? ui.glowColor : colors.borderBlack }
+              ]}>
+                <Text style={styles.msgAvatarInitials}>{convo.initials}</Text>
+              </View>
+              <View style={styles.msgConvoBody}>
+                <View style={styles.msgConvoMeta}>
+                  <Text style={styles.msgConvoName}>{convo.name}</Text>
+                  <View style={styles.msgConvoRight}>
+                    {convo.burn && <Text style={styles.msgBurnIcon}>🔥</Text>}
+                    <Text style={styles.msgConvoTime}>{convo.time}</Text>
+                    {convo.unread && <View style={styles.msgUnreadDot} />}
+                  </View>
+                </View>
+                <Text style={styles.msgConvoPreview} numberOfLines={1}>{convo.preview}</Text>
+              </View>
+            </TouchableOpacity>
+          ))}
+
+          {/* New Message CTA */}
+          <TouchableOpacity
+            activeOpacity={ui.actionOpacity}
+            onPress={() => ui.playUiAction()}
+            style={[styles.msgNewMessageBtn, { backgroundColor: ui.primaryColor }]}
+          >
+            <Text style={styles.msgNewMessageBtnText}>＋ New Message</Text>
+          </TouchableOpacity>
+        </View>
+      )}
+
+      {/* Secret Groups list */}
+      {activeTab === "groups" && (
+        <View>
+          {MSG_SECRET_GROUPS.map((group) => (
+            <TouchableOpacity
+              key={group.id}
+              activeOpacity={ui.actionOpacity}
+              onPress={() => ui.playUiAction()}
+              style={styles.msgGroupRow}
+            >
+              <View style={[styles.msgGroupIcon, { borderColor: ui.primaryColor }]}>
+                <Text style={styles.msgGroupIconText}>{group.icon}</Text>
+              </View>
+              <View style={styles.msgGroupBody}>
+                <Text style={styles.msgGroupName}>{group.name}</Text>
+                <Text style={styles.msgGroupMeta}>{group.members} members · {group.lastActivity}</Text>
+              </View>
+            </TouchableOpacity>
+          ))}
+
+          <TouchableOpacity
+            activeOpacity={ui.actionOpacity}
+            onPress={() => ui.playUiAction()}
+            style={[styles.msgNewMessageBtn, { backgroundColor: ui.primaryColor }]}
+          >
+            <Text style={styles.msgNewMessageBtnText}>＋ New Secret Group</Text>
+          </TouchableOpacity>
+        </View>
+      )}
+
+      {/* Voice Relay tab */}
+      {activeTab === "relay" && (
+        <View>
+          <View style={[styles.msgRelayCard, { borderColor: ui.primaryColor }]}>
+            <Text style={styles.msgRelayIcon}>🎙️</Text>
+            <Text style={styles.msgRelayTitle}>Encrypted Voice Relay</Text>
+            <Text style={styles.msgRelayBody}>
+              Leave a silent voice note that auto-deletes after playback.
+              No metadata. No trace. Vault-grade audio encryption.
+            </Text>
+            <View style={styles.msgRelayFeatures}>
+              {["Auto-deletes after playback", "No sender metadata", "Relay path obfuscation", "Voice-only — no text fallback"].map((feat) => (
+                <View key={feat} style={styles.featureRow}>
+                  <Text style={[styles.featureBullet, { color: ui.glowColor }]}>◆</Text>
+                  <Text style={styles.featureText}>{feat}</Text>
+                </View>
+              ))}
+            </View>
+          </View>
+          <TouchableOpacity
+            activeOpacity={ui.actionOpacity}
+            onPress={() => ui.playUiAction()}
+            style={[styles.msgRelayStartBtn, { backgroundColor: ui.primaryColor, borderColor: ui.glowColor }]}
+          >
+            <Text style={styles.msgNewMessageBtnText}>▶ Start Relay</Text>
+          </TouchableOpacity>
+        </View>
+      )}
+
+      {/* Make home realm */}
+      <TouchableOpacity
+        style={[styles.secondaryButton, profile.homeRealm === "messaging" && styles.secondaryButtonDisabled]}
+        onPress={() => onMakeHome("messaging")}
+      >
+        <Text style={styles.secondaryButtonText}>
+          {profile.homeRealm === "messaging" ? "Home realm selected" : "Make home realm"}
+        </Text>
+      </TouchableOpacity>
+    </View>
+  );
+}
+
 function RealmsScreen({
   profile,
   selectedRealm,
@@ -953,77 +1199,81 @@ function RealmsScreen({
         })}
       </ScrollView>
 
-      <View style={[styles.realmDetail, shadow, { borderColor: ui.primaryColor }]}> 
-        <Text style={[styles.realmDetailIcon, { color: ui.glowColor }]}>{selectedRealm.icon}</Text>
-        <Text style={styles.realmDetailTitle}>{selectedRealm.title}</Text>
-        <Text style={[styles.realmPromise, { color: ui.glowColor }]}>{selectedRealm.promise}</Text>
-        <Text style={styles.bodyText}>{selectedRealm.description}</Text>
+      {selectedRealm.key === "messaging" ? (
+        <MessagingRealmView profile={profile} onMakeHome={onMakeHome} />
+      ) : (
+        <View style={[styles.realmDetail, shadow, { borderColor: ui.primaryColor }]}> 
+          <Text style={[styles.realmDetailIcon, { color: ui.glowColor }]}>{selectedRealm.icon}</Text>
+          <Text style={styles.realmDetailTitle}>{selectedRealm.title}</Text>
+          <Text style={[styles.realmPromise, { color: ui.glowColor }]}>{selectedRealm.promise}</Text>
+          <Text style={styles.bodyText}>{selectedRealm.description}</Text>
 
-        <ContentCard>
-          <Text style={styles.cardKicker}>ENVIRONMENT MISSION</Text>
-          <Text style={styles.cardTitle}>{environment.mission}</Text>
-          <Text style={styles.bodyText}>{environment.atmosphere}</Text>
-        </ContentCard>
+          <ContentCard>
+            <Text style={styles.cardKicker}>ENVIRONMENT MISSION</Text>
+            <Text style={styles.cardTitle}>{environment.mission}</Text>
+            <Text style={styles.bodyText}>{environment.atmosphere}</Text>
+          </ContentCard>
 
-        <SectionTitle
-          title="Environment Modules"
-          subtitle="Each realm ships with a complete operating environment, not just a single feed."
-        />
+          <SectionTitle
+            title="Environment Modules"
+            subtitle="Each realm ships with a complete operating environment, not just a single feed."
+          />
 
-        {environment.modules.map((module) => (
-          <ContentCard key={module.name}>
-            <Text style={styles.cardKicker}>MODULE</Text>
-            <Text style={styles.cardTitle}>{module.name}</Text>
-            <Text style={styles.bodyText}>{module.description}</Text>
-            <View style={styles.featureList}>
-              {module.capabilities.map((capability) => (
-                <View key={capability} style={styles.featureRow}>
-                  <Text style={[styles.featureBullet, { color: ui.glowColor }]}>◆</Text>
-                  <Text style={styles.featureText}>{capability}</Text>
-                </View>
-              ))}
+          {environment.modules.map((module) => (
+            <ContentCard key={module.name}>
+              <Text style={styles.cardKicker}>MODULE</Text>
+              <Text style={styles.cardTitle}>{module.name}</Text>
+              <Text style={styles.bodyText}>{module.description}</Text>
+              <View style={styles.featureList}>
+                {module.capabilities.map((capability) => (
+                  <View key={capability} style={styles.featureRow}>
+                    <Text style={[styles.featureBullet, { color: ui.glowColor }]}>◆</Text>
+                    <Text style={styles.featureText}>{capability}</Text>
+                  </View>
+                ))}
+              </View>
+            </ContentCard>
+          ))}
+
+          <ContentCard>
+            <Text style={styles.cardKicker}>SEAMLESS BLEND PATHS</Text>
+            <Text style={styles.bodyText}>
+              {ui.blendEnabled
+                ? "Cross-realm transitions are active. Modules can hand off context into connected realms."
+                : "Cross-realm transitions are paused. Realms currently operate in isolated mode."}
+            </Text>
+            <View style={styles.realmChipWrap}>
+              {environment.blendTargets.map((targetKey) => {
+                const target = realms.find((realm) => realm.key === targetKey) ?? realms[0];
+
+                return (
+                  <View key={target.key} style={[styles.realmChip, { borderColor: ui.primaryColor }]}> 
+                    <Text style={[styles.realmChipText, { color: colors.boneWhite }]}>{target.shortTitle}</Text>
+                  </View>
+                );
+              })}
             </View>
           </ContentCard>
-        ))}
 
-        <ContentCard>
-          <Text style={styles.cardKicker}>SEAMLESS BLEND PATHS</Text>
-          <Text style={styles.bodyText}>
-            {ui.blendEnabled
-              ? "Cross-realm transitions are active. Modules can hand off context into connected realms."
-              : "Cross-realm transitions are paused. Realms currently operate in isolated mode."}
-          </Text>
-          <View style={styles.realmChipWrap}>
-            {environment.blendTargets.map((targetKey) => {
-              const target = realms.find((realm) => realm.key === targetKey) ?? realms[0];
-
-              return (
-                <View key={target.key} style={[styles.realmChip, { borderColor: ui.primaryColor }]}> 
-                  <Text style={[styles.realmChipText, { color: colors.boneWhite }]}>{target.shortTitle}</Text>
-                </View>
-              );
-            })}
+          <View style={styles.featureList}>
+            {selectedRealm.features.map((feature) => (
+              <View key={feature} style={styles.featureRow}>
+                <Text style={styles.featureBullet}>◆</Text>
+                <Text style={styles.featureText}>{feature}</Text>
+              </View>
+            ))}
           </View>
-        </ContentCard>
 
-        <View style={styles.featureList}>
-          {selectedRealm.features.map((feature) => (
-            <View key={feature} style={styles.featureRow}>
-              <Text style={styles.featureBullet}>◆</Text>
-              <Text style={styles.featureText}>{feature}</Text>
-            </View>
-          ))}
+          <TouchableOpacity
+            style={[styles.secondaryButton, profile.homeRealm === selectedRealm.key && styles.secondaryButtonDisabled]}
+            onPress={() => onMakeHome(selectedRealm.key)}
+          >
+            <Text style={styles.secondaryButtonText}>
+              {profile.homeRealm === selectedRealm.key ? "Home realm selected" : "Make home realm"}
+            </Text>
+          </TouchableOpacity>
         </View>
-
-        <TouchableOpacity
-          style={[styles.secondaryButton, profile.homeRealm === selectedRealm.key && styles.secondaryButtonDisabled]}
-          onPress={() => onMakeHome(selectedRealm.key)}
-        >
-          <Text style={styles.secondaryButtonText}>
-            {profile.homeRealm === selectedRealm.key ? "Home realm selected" : "Make home realm"}
-          </Text>
-        </TouchableOpacity>
-      </View>
+      )}
 
       <ContentCard>
         <Text style={styles.cardKicker}>CATEGORY</Text>
@@ -2354,5 +2604,204 @@ const styles = StyleSheet.create({
     color: colors.boneWhite,
     fontSize: 24,
     fontWeight: "900"
+  },
+
+  // ─── Messaging Realm styles ───────────────────────────────────────────────
+  msgStatusBanner: {
+    borderWidth: 1,
+    borderRadius: 999,
+    paddingHorizontal: spacing.md,
+    paddingVertical: 8,
+    alignItems: "center",
+    backgroundColor: colors.vaultBlack,
+    marginBottom: spacing.md
+  },
+  msgStatusBannerText: {
+    fontSize: 11,
+    fontWeight: "800",
+    letterSpacing: 0.6
+  },
+  msgSearchBar: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: spacing.sm,
+    backgroundColor: colors.deepBlack,
+    borderWidth: 1,
+    borderRadius: radius.md,
+    paddingHorizontal: spacing.md,
+    paddingVertical: 11,
+    marginBottom: spacing.md
+  },
+  msgSearchIcon: {
+    fontSize: 15
+  },
+  msgSearchPlaceholder: {
+    color: colors.mutedGray,
+    fontSize: 14
+  },
+  msgTabRow: {
+    flexDirection: "row",
+    gap: 6,
+    marginBottom: spacing.md,
+    flexWrap: "wrap"
+  },
+  msgTab: {
+    flex: 1,
+    minWidth: 90,
+    paddingVertical: 9,
+    paddingHorizontal: spacing.sm,
+    borderRadius: 999,
+    borderWidth: 1,
+    borderColor: colors.borderBlack,
+    backgroundColor: colors.deepBlack,
+    alignItems: "center"
+  },
+  msgTabText: {
+    color: colors.mutedGray,
+    fontSize: 11,
+    fontWeight: "800"
+  },
+  msgTabTextActive: {
+    color: colors.boneWhite
+  },
+  msgConvoRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: spacing.md,
+    paddingVertical: spacing.sm,
+    borderBottomWidth: 1,
+    borderBottomColor: colors.borderBlack
+  },
+  msgAvatar: {
+    width: 48,
+    height: 48,
+    borderRadius: 24,
+    borderWidth: 2,
+    backgroundColor: colors.cardBlack,
+    alignItems: "center",
+    justifyContent: "center"
+  },
+  msgAvatarInitials: {
+    color: colors.boneWhite,
+    fontSize: 14,
+    fontWeight: "900"
+  },
+  msgConvoBody: {
+    flex: 1
+  },
+  msgConvoMeta: {
+    flexDirection: "row",
+    justifyContent: "space-between",
+    alignItems: "center",
+    marginBottom: 3
+  },
+  msgConvoName: {
+    color: colors.boneWhite,
+    fontSize: 14,
+    fontWeight: "800"
+  },
+  msgConvoRight: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 5
+  },
+  msgConvoTime: {
+    color: colors.mutedGray,
+    fontSize: 11
+  },
+  msgConvoPreview: {
+    color: colors.softGray,
+    fontSize: 13
+  },
+  msgUnreadDot: {
+    width: 8,
+    height: 8,
+    borderRadius: 4,
+    backgroundColor: "#EF4444"
+  },
+  msgBurnIcon: {
+    fontSize: 12
+  },
+  msgNewMessageBtn: {
+    marginTop: spacing.md,
+    borderRadius: radius.md,
+    paddingVertical: 14,
+    alignItems: "center"
+  },
+  msgNewMessageBtnText: {
+    color: colors.boneWhite,
+    fontWeight: "900",
+    fontSize: 15,
+    letterSpacing: 0.4
+  },
+  msgGroupRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: spacing.md,
+    paddingVertical: spacing.sm,
+    borderBottomWidth: 1,
+    borderBottomColor: colors.borderBlack
+  },
+  msgGroupIcon: {
+    width: 48,
+    height: 48,
+    borderRadius: radius.sm,
+    borderWidth: 1,
+    backgroundColor: colors.cardBlack,
+    alignItems: "center",
+    justifyContent: "center"
+  },
+  msgGroupIconText: {
+    fontSize: 22
+  },
+  msgGroupBody: {
+    flex: 1
+  },
+  msgGroupName: {
+    color: colors.boneWhite,
+    fontSize: 14,
+    fontWeight: "800",
+    marginBottom: 3
+  },
+  msgGroupMeta: {
+    color: colors.mutedGray,
+    fontSize: 12
+  },
+  msgRelayCard: {
+    backgroundColor: colors.vaultBlack,
+    borderWidth: 1,
+    borderRadius: radius.lg,
+    padding: spacing.lg,
+    marginBottom: spacing.md,
+    alignItems: "center"
+  },
+  msgRelayIcon: {
+    fontSize: 40,
+    marginBottom: spacing.sm
+  },
+  msgRelayTitle: {
+    color: colors.boneWhite,
+    fontSize: 18,
+    fontWeight: "900",
+    marginBottom: spacing.sm,
+    textAlign: "center"
+  },
+  msgRelayBody: {
+    color: colors.softGray,
+    fontSize: 14,
+    lineHeight: 22,
+    textAlign: "center",
+    marginBottom: spacing.md
+  },
+  msgRelayFeatures: {
+    width: "100%",
+    gap: spacing.sm
+  },
+  msgRelayStartBtn: {
+    borderWidth: 1,
+    borderRadius: radius.md,
+    paddingVertical: 14,
+    alignItems: "center",
+    marginBottom: spacing.md
   }
 });
