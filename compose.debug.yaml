@@ -1,0 +1,6 @@
+services:
+  sojournx:
+    image: sojournx
+    build:
+      context: .
+      dockerfile: ./Dockerfile

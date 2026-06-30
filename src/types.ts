@@ -60,6 +60,11 @@ export type UiPreferences = {
   soundEnabled: boolean;
   soundPack: UiSoundPack;
   soundVolume: number;
+  customAccentPrimary?: string;
+  customAccentGlow?: string;
+  backgroundTheme?: 'vault' | 'navy' | 'forest' | 'ember' | 'noir' | 'phantom';
+  fontStyle?: 'system' | 'serif' | 'mono' | 'rounded';
+  savedThemes?: Array<{ name: string; settings: Partial<UiPreferences> }>;
 };
 
 export type NavTab = BetaTab;
