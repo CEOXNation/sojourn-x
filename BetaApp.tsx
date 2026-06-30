@@ -1027,6 +1027,181 @@ function PulseScreen({
   );
 }
 
+// ─── Growth Realm mock data ────────────────────────────────────────────────
+
+const grwGoals = [
+  { id: "g1", title: "Read 12 books this year", category: "Mindset", progress: 0.75 },
+  { id: "g2", title: "Run a 5K under 25 min", category: "Fitness", progress: 0.5 },
+  { id: "g3", title: "Ship a side project", category: "Skills", progress: 0.3 },
+  { id: "g4", title: "Save $5,000 emergency fund", category: "Finance", progress: 0.88 },
+  { id: "g5", title: "Call family weekly", category: "Relationships", progress: 0.6 }
+] as const;
+
+const grwHabits = [
+  { id: "h1", emoji: "🧘", label: "Morning meditation", streak: 8, done: true },
+  { id: "h2", emoji: "📖", label: "Read 20 pages", streak: 12, done: true },
+  { id: "h3", emoji: "💧", label: "Drink 8 glasses of water", streak: 5, done: false },
+  { id: "h4", emoji: "🏃", label: "30-min movement", streak: 3, done: false },
+  { id: "h5", emoji: "✍️", label: "Journal one page", streak: 12, done: true },
+  { id: "h6", emoji: "😴", label: "Sleep by 11 PM", streak: 2, done: false }
+] as const;
+
+const grwMoments = [
+  { id: "m1", text: "Finished Chapter 9 of Atomic Habits", when: "2h ago", reaction: "🎯" },
+  { id: "m2", text: "Hit new 5K personal best: 26:12", when: "Yesterday", reaction: "🔥" },
+  { id: "m3", text: "Transferred $300 to emergency fund", when: "2 days ago", reaction: "💰" },
+  { id: "m4", text: "Completed 7-day meditation streak", when: "3 days ago", reaction: "🧘" }
+] as const;
+
+const grwCategoryColor: Record<string, string> = {
+  Mindset: "#7C3AED",
+  Fitness: "#059669",
+  Skills: "#2563EB",
+  Finance: "#D97706",
+  Relationships: "#DB2777"
+};
+
+function GrowthRealmView({
+  profile,
+  onMakeHome
+}: {
+  profile: BetaProfile;
+  onMakeHome: (key: RealmKey) => void;
+}) {
+  const ui = useUiRuntime();
+  const [habitState, setHabitState] = useState<Record<string, boolean>>(
+    () => Object.fromEntries(grwHabits.map((h) => [h.id, h.done]))
+  );
+
+  const completedGoals = grwGoals.filter((g) => g.progress >= 1).length;
+  const activeHabits = Object.values(habitState).filter(Boolean).length;
+
+  return (
+    <View>
+      {/* Dashboard header */}
+      <ContentCard>
+        <Text style={styles.cardKicker}>SELF-DEVELOPMENT REALM</Text>
+        <Text style={[styles.cardTitle, { fontSize: 22 }]}>Build the best version of you.</Text>
+        <Text style={styles.bodyText}>Every habit, goal, and reflection compounds over time.</Text>
+        <View style={[styles.grwStreakBadge, { backgroundColor: ui.primaryColor }]}>
+          <Text style={styles.grwStreakText}>🔥 12-day streak</Text>
+        </View>
+      </ContentCard>
+
+      {/* Progress metrics row */}
+      <SectionTitle title="Your Progress" subtitle="Key metrics across your growth journey." />
+      <View style={styles.grwMetricRow}>
+        {[
+          { label: "Goals\nCompleted", value: `${completedGoals}/${grwGoals.length}` },
+          { label: "Active\nHabits", value: `${activeHabits}/${grwHabits.length}` },
+          { label: "Reflection\nStreak", value: "12 days" },
+          { label: "Growth\nScore", value: "847" }
+        ].map((m) => (
+          <View key={m.label} style={[styles.grwMetricCard, { borderColor: ui.primaryColor }]}>
+            <Text style={[styles.grwMetricValue, { color: ui.glowColor }]}>{m.value}</Text>
+            <Text style={styles.grwMetricLabel}>{m.label}</Text>
+          </View>
+        ))}
+      </View>
+
+      {/* Active Goals */}
+      <SectionTitle title="Active Goals" subtitle="Tap 'Check in' to log progress." />
+      {grwGoals.map((goal) => (
+        <View key={goal.id} style={[styles.grwGoalCard, shadow]}>
+          <View style={styles.grwGoalHeader}>
+            <View style={{ flex: 1 }}>
+              <Text style={styles.grwGoalTitle}>{goal.title}</Text>
+              <View style={[styles.grwCategoryPill, { backgroundColor: grwCategoryColor[goal.category] + "33", borderColor: grwCategoryColor[goal.category] }]}>
+                <Text style={[styles.grwCategoryText, { color: grwCategoryColor[goal.category] }]}>{goal.category}</Text>
+              </View>
+            </View>
+            <TouchableOpacity
+              style={[styles.grwCheckInBtn, { borderColor: ui.primaryColor }]}
+              onPress={() => ui.playUiAction()}
+            >
+              <Text style={[styles.grwCheckInText, { color: ui.glowColor }]}>Check in</Text>
+            </TouchableOpacity>
+          </View>
+          <View style={styles.grwProgressTrack}>
+            <View style={[styles.grwProgressFill, { width: `${Math.round(goal.progress * 100)}%` as any, backgroundColor: ui.primaryColor }]} />
+          </View>
+          <Text style={styles.grwProgressLabel}>{Math.round(goal.progress * 100)}% complete</Text>
+        </View>
+      ))}
+
+      {/* Daily Habits */}
+      <SectionTitle title="Daily Habits" subtitle="Tap a habit to toggle today's completion." />
+      <ContentCard>
+        {grwHabits.map((habit) => {
+          const done = habitState[habit.id] ?? false;
+          return (
+            <TouchableOpacity
+              key={habit.id}
+              style={styles.grwHabitRow}
+              onPress={() => {
+                ui.playUiAction();
+                setHabitState((prev) => ({ ...prev, [habit.id]: !prev[habit.id] }));
+              }}
+            >
+              <View style={[styles.grwHabitCheck, done && { backgroundColor: ui.primaryColor, borderColor: ui.primaryColor }]}>
+                {done && <Text style={styles.grwHabitCheckMark}>✓</Text>}
+              </View>
+              <Text style={styles.grwHabitEmoji}>{habit.emoji}</Text>
+              <View style={{ flex: 1 }}>
+                <Text style={[styles.grwHabitLabel, done && { color: ui.glowColor }]}>{habit.label}</Text>
+              </View>
+              <Text style={styles.grwHabitStreak}>🔥 {habit.streak}</Text>
+            </TouchableOpacity>
+          );
+        })}
+      </ContentCard>
+
+      {/* Weekly Reflection */}
+      <SectionTitle title="Weekly Reflection" subtitle="A private record of your inner progress." />
+      <ContentCard>
+        <Text style={[styles.cardKicker, { color: ui.glowColor }]}>THIS WEEK'S PROMPT</Text>
+        <Text style={styles.grwReflectionPrompt}>What moved you forward this week?</Text>
+        <View style={styles.grwReflectionAnswer}>
+          <Text style={styles.bodyText}>
+            "Staying consistent with the morning routine even when I didn't feel like it. The streak matters more than the feeling."
+          </Text>
+        </View>
+        <TouchableOpacity
+          style={[styles.grwReflectionBtn, { backgroundColor: ui.primaryColor }]}
+          onPress={() => ui.playUiAction()}
+        >
+          <Text style={styles.primaryButtonText}>Write reflection</Text>
+        </TouchableOpacity>
+      </ContentCard>
+
+      {/* Growth moments feed */}
+      <SectionTitle title="Growth Moments" subtitle="A micro-log of what you've accomplished." />
+      {grwMoments.map((moment) => (
+        <View key={moment.id} style={[styles.grwMomentCard, shadow]}>
+          <Text style={styles.grwMomentReaction}>{moment.reaction}</Text>
+          <View style={{ flex: 1 }}>
+            <Text style={styles.grwMomentText}>{moment.text}</Text>
+            <Text style={styles.grwMomentWhen}>{moment.when}</Text>
+          </View>
+        </View>
+      ))}
+
+      {/* Make home realm */}
+      <TouchableOpacity
+        style={[styles.secondaryButton, profile.homeRealm === "growth" && styles.secondaryButtonDisabled]}
+        onPress={() => {
+          ui.playUiAction();
+          onMakeHome("growth");
+        }}
+      >
+        <Text style={styles.secondaryButtonText}>
+          {profile.homeRealm === "growth" ? "Home realm selected" : "Make home realm"}
+        </Text>
+      </TouchableOpacity>
+    </View>
+  );
+}
+
 function RealmsScreen({
   profile,
   selectedRealm,
@@ -1077,6 +1252,10 @@ function RealmsScreen({
         })}
       </ScrollView>
 
+      {selectedRealm.key === "growth" ? (
+        <GrowthRealmView profile={profile} onMakeHome={onMakeHome} />
+      ) : (
+      <>
       <View style={[styles.realmDetail, shadow, { borderColor: ui.primaryColor }]}> 
         <Text style={[styles.realmDetailIcon, { color: ui.glowColor }]}>{selectedRealm.icon}</Text>
         <Text style={styles.realmDetailTitle}>{selectedRealm.title}</Text>
@@ -1170,6 +1349,8 @@ function RealmsScreen({
           is measurable instead of just promised.
         </Text>
       </ContentCard>
+      </>
+      )}
     </View>
   );
 }
@@ -2872,5 +3053,178 @@ const styles = StyleSheet.create({
     color: colors.boneWhite,
     fontSize: 24,
     fontWeight: "900"
+  },
+  grwStreakBadge: {
+    alignSelf: "flex-start",
+    borderRadius: 999,
+    paddingHorizontal: 14,
+    paddingVertical: 6,
+    marginTop: spacing.md
+  },
+  grwStreakText: {
+    color: colors.boneWhite,
+    fontSize: 13,
+    fontWeight: "900"
+  },
+  grwMetricRow: {
+    flexDirection: "row",
+    flexWrap: "wrap",
+    gap: spacing.sm,
+    marginBottom: spacing.md
+  },
+  grwMetricCard: {
+    width: "48%",
+    backgroundColor: colors.cardBlack,
+    borderRadius: radius.lg,
+    borderWidth: 1,
+    padding: spacing.md,
+    alignItems: "center"
+  },
+  grwMetricValue: {
+    fontSize: 20,
+    fontWeight: "900",
+    marginBottom: 4
+  },
+  grwMetricLabel: {
+    color: colors.mutedGray,
+    fontSize: 11,
+    textAlign: "center",
+    textTransform: "uppercase",
+    letterSpacing: 0.8
+  },
+  grwGoalCard: {
+    backgroundColor: colors.cardBlack,
+    borderRadius: radius.lg,
+    padding: spacing.md,
+    borderWidth: 1,
+    borderColor: colors.borderBlack,
+    marginBottom: spacing.sm
+  },
+  grwGoalHeader: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: spacing.sm,
+    marginBottom: spacing.sm
+  },
+  grwGoalTitle: {
+    color: colors.boneWhite,
+    fontSize: 15,
+    fontWeight: "800",
+    marginBottom: 4
+  },
+  grwCategoryPill: {
+    alignSelf: "flex-start",
+    borderRadius: 999,
+    borderWidth: 1,
+    paddingHorizontal: 8,
+    paddingVertical: 3
+  },
+  grwCategoryText: {
+    fontSize: 11,
+    fontWeight: "700"
+  },
+  grwCheckInBtn: {
+    borderRadius: radius.md,
+    borderWidth: 1,
+    paddingHorizontal: 12,
+    paddingVertical: 8
+  },
+  grwCheckInText: {
+    fontSize: 12,
+    fontWeight: "800"
+  },
+  grwProgressTrack: {
+    height: 6,
+    borderRadius: 3,
+    backgroundColor: colors.deepBlack,
+    overflow: "hidden",
+    marginBottom: 4
+  },
+  grwProgressFill: {
+    height: 6,
+    borderRadius: 3
+  },
+  grwProgressLabel: {
+    color: colors.mutedGray,
+    fontSize: 11
+  },
+  grwHabitRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: spacing.sm,
+    paddingVertical: 10,
+    borderBottomWidth: 1,
+    borderBottomColor: colors.borderBlack
+  },
+  grwHabitCheck: {
+    width: 26,
+    height: 26,
+    borderRadius: 13,
+    borderWidth: 2,
+    borderColor: colors.borderBlack,
+    alignItems: "center",
+    justifyContent: "center"
+  },
+  grwHabitCheckMark: {
+    color: colors.boneWhite,
+    fontSize: 14,
+    fontWeight: "900"
+  },
+  grwHabitEmoji: {
+    fontSize: 20
+  },
+  grwHabitLabel: {
+    color: colors.softGray,
+    fontSize: 14,
+    fontWeight: "700"
+  },
+  grwHabitStreak: {
+    color: colors.mutedGray,
+    fontSize: 12,
+    fontWeight: "700"
+  },
+  grwReflectionPrompt: {
+    color: colors.boneWhite,
+    fontSize: 18,
+    fontWeight: "800",
+    lineHeight: 26,
+    marginBottom: spacing.sm
+  },
+  grwReflectionAnswer: {
+    backgroundColor: colors.deepBlack,
+    borderRadius: radius.md,
+    padding: spacing.md,
+    marginBottom: spacing.md,
+    borderLeftWidth: 3,
+    borderLeftColor: colors.borderBlack
+  },
+  grwReflectionBtn: {
+    borderRadius: radius.md,
+    paddingVertical: 13,
+    alignItems: "center"
+  },
+  grwMomentCard: {
+    backgroundColor: colors.cardBlack,
+    borderRadius: radius.lg,
+    padding: spacing.md,
+    borderWidth: 1,
+    borderColor: colors.borderBlack,
+    marginBottom: spacing.sm,
+    flexDirection: "row",
+    alignItems: "center",
+    gap: spacing.md
+  },
+  grwMomentReaction: {
+    fontSize: 28
+  },
+  grwMomentText: {
+    color: colors.boneWhite,
+    fontSize: 14,
+    fontWeight: "700",
+    marginBottom: 4
+  },
+  grwMomentWhen: {
+    color: colors.mutedGray,
+    fontSize: 12
   }
 });
