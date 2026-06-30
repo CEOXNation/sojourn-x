@@ -911,6 +911,254 @@ function PulseScreen({
   );
 }
 
+const mktCategories = ["All", "Digital", "Physical", "Services", "Curated", "Local"] as const;
+type MktCategory = (typeof mktCategories)[number];
+
+const mktFeaturedListing = {
+  id: "featured-1",
+  icon: "🎨",
+  title: "Vault Art Bundle — 12 Exclusive Prints",
+  price: "$40 – $120",
+  description:
+    "A curated collection of dark-aesthetic digital prints for your vault space. One-time purchase, no tracking.",
+  seller: "Vault Seller #07",
+  category: "Digital" as MktCategory,
+  anonPurchase: true
+};
+
+const mktListings = [
+  {
+    id: "listing-1",
+    icon: "🖥️",
+    title: "Dark UI Component Kit",
+    price: "$18",
+    seller: "Vault Seller #42",
+    category: "Digital" as MktCategory,
+    likes: 34
+  },
+  {
+    id: "listing-2",
+    icon: "📿",
+    title: "Handcrafted Obsidian Bracelet",
+    price: "$55",
+    seller: "Vault Seller #91",
+    category: "Physical" as MktCategory,
+    likes: 19
+  },
+  {
+    id: "listing-3",
+    icon: "🔮",
+    title: "Anonymous Identity Consultation",
+    price: "$75/hr",
+    seller: "Vault Seller #13",
+    category: "Services" as MktCategory,
+    likes: 27
+  },
+  {
+    id: "listing-4",
+    icon: "📖",
+    title: "Encrypted Journal Template Pack",
+    price: "$12",
+    seller: "Vault Seller #58",
+    category: "Digital" as MktCategory,
+    likes: 41
+  },
+  {
+    id: "listing-5",
+    icon: "🌿",
+    title: "Local Herbalist Drop Box — Monthly",
+    price: "$30/mo",
+    seller: "Vault Seller #03",
+    category: "Local" as MktCategory,
+    likes: 11
+  },
+  {
+    id: "listing-6",
+    icon: "🎧",
+    title: "Curated Vault Soundscape Vol. 3",
+    price: "$9",
+    seller: "Vault Seller #77",
+    category: "Curated" as MktCategory,
+    likes: 62
+  }
+];
+
+function MarketplaceRealmView({
+  profile,
+  onMakeHome
+}: {
+  profile: BetaProfile;
+  onMakeHome: (realmKey: RealmKey) => void;
+}) {
+  const ui = useUiRuntime();
+  const [activeCategory, setActiveCategory] = useState<MktCategory>("All");
+  const [anonOnly, setAnonOnly] = useState(false);
+  const [likedIds, setLikedIds] = useState<string[]>([]);
+
+  const visibleListings = mktListings.filter(
+    (item) => activeCategory === "All" || item.category === activeCategory
+  );
+
+  const toggleLike = (id: string) => {
+    ui.playUiAction();
+    setLikedIds((prev) => (prev.includes(id) ? prev.filter((x) => x !== id) : [...prev, id]));
+  };
+
+  return (
+    <View>
+      <SectionTitle title="Marketplace Realm" subtitle="Privacy-first buying and selling. No real names required." />
+
+      {/* Category chips */}
+      <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.mktChipRow}>
+        {mktCategories.map((cat) => {
+          const active = cat === activeCategory;
+          return (
+            <TouchableOpacity
+              key={cat}
+              activeOpacity={ui.actionOpacity}
+              onPress={() => { ui.playUiAction(); setActiveCategory(cat); }}
+              style={[
+                styles.mktFilterChip,
+                active && { backgroundColor: ui.primaryColor, borderColor: ui.glowColor }
+              ]}
+            >
+              <Text style={[styles.mktFilterChipText, active && { color: colors.boneWhite }]}>{cat}</Text>
+            </TouchableOpacity>
+          );
+        })}
+      </ScrollView>
+
+      {/* Active filters row */}
+      <View style={styles.mktActiveFilters}>
+        <View style={[styles.mktFilterChip, { borderColor: ui.primaryColor }]}>
+          <Text style={[styles.mktFilterChipText, { color: colors.boneWhite }]}>$0 – $200</Text>
+        </View>
+        <View style={[styles.mktFilterChip, { borderColor: ui.primaryColor }]}>
+          <Text style={[styles.mktFilterChipText, { color: colors.boneWhite }]}>{activeCategory}</Text>
+        </View>
+        <View style={styles.mktAnonToggleRow}>
+          <Text style={styles.mktAnonToggleLabel}>Anon Only</Text>
+          <Switch
+            value={anonOnly}
+            onValueChange={(val) => { ui.playUiAction(); setAnonOnly(val); }}
+            trackColor={{ false: colors.borderBlack, true: ui.primaryColor }}
+            thumbColor={anonOnly ? ui.glowColor : colors.mutedGray}
+          />
+        </View>
+      </View>
+
+      {/* Featured hero listing */}
+      <View style={[styles.mktHeroCard, { borderColor: ui.primaryColor }]}>
+        <View style={styles.mktHeroBadgeRow}>
+          <View style={[styles.mktAnonBadge, { backgroundColor: ui.primaryColor }]}>
+            <Text style={styles.mktAnonBadgeText}>🔒 Anon Purchase</Text>
+          </View>
+          <Text style={[styles.mktCategoryTag, { color: ui.glowColor }]}>
+            {mktFeaturedListing.category}
+          </Text>
+        </View>
+        <Text style={styles.mktHeroIcon}>{mktFeaturedListing.icon}</Text>
+        <Text style={styles.mktHeroTitle}>{mktFeaturedListing.title}</Text>
+        <Text style={[styles.mktHeroPrice, { color: ui.glowColor }]}>{mktFeaturedListing.price}</Text>
+        <Text style={styles.mktHeroDesc}>{mktFeaturedListing.description}</Text>
+        <Text style={styles.mktSellerTag}>{mktFeaturedListing.seller}</Text>
+        <TouchableOpacity
+          activeOpacity={ui.actionOpacity}
+          onPress={() => ui.playUiAction()}
+          style={[styles.mktCtaButton, { backgroundColor: ui.primaryColor, borderColor: ui.glowColor }]}
+        >
+          <Text style={styles.mktCtaButtonText}>View Listing</Text>
+        </TouchableOpacity>
+      </View>
+
+      {/* Post a listing composer */}
+      <ContentCard>
+        <Text style={styles.cardKicker}>POST A LISTING</Text>
+        <View style={styles.mktComposerRow}>
+          <View style={[styles.mktComposerAvatar, { backgroundColor: ui.primaryColor }]}>
+            <Text style={styles.mktComposerAvatarText}>{profile.avatar || "V"}</Text>
+          </View>
+          <View style={[styles.mktComposerInput]}>
+            <Text style={styles.mktComposerPlaceholder}>What are you offering?</Text>
+          </View>
+        </View>
+        <View style={styles.mktComposerChips}>
+          <TouchableOpacity
+            activeOpacity={ui.actionOpacity}
+            onPress={() => ui.playUiAction()}
+            style={[styles.mktFilterChip, { borderColor: ui.primaryColor }]}
+          >
+            <Text style={[styles.mktFilterChipText, { color: colors.boneWhite }]}>📷 Photo</Text>
+          </TouchableOpacity>
+          <TouchableOpacity
+            activeOpacity={ui.actionOpacity}
+            onPress={() => ui.playUiAction()}
+            style={[styles.mktFilterChip, { borderColor: ui.primaryColor }]}
+          >
+            <Text style={[styles.mktFilterChipText, { color: colors.boneWhite }]}>🏷️ Category</Text>
+          </TouchableOpacity>
+          <TouchableOpacity
+            activeOpacity={ui.actionOpacity}
+            onPress={() => ui.playUiAction()}
+            style={[styles.mktFilterChip, { borderColor: ui.primaryColor }]}
+          >
+            <Text style={[styles.mktFilterChipText, { color: colors.boneWhite }]}>💰 Price</Text>
+          </TouchableOpacity>
+        </View>
+      </ContentCard>
+
+      {/* Listing grid */}
+      <SectionTitle title="Browse Listings" subtitle="All sellers are vault-anonymized by default." />
+      <View style={styles.mktListingGrid}>
+        {visibleListings.map((item) => {
+          const liked = likedIds.includes(item.id);
+          return (
+            <TouchableOpacity
+              key={item.id}
+              activeOpacity={ui.actionOpacity}
+              onPress={() => ui.playUiAction()}
+              style={[styles.mktListingCard, { borderColor: colors.borderBlack }]}
+            >
+              <Text style={styles.mktListingIcon}>{item.icon}</Text>
+              <Text style={styles.mktListingTitle} numberOfLines={2}>{item.title}</Text>
+              <Text style={[styles.mktListingPrice, { color: ui.glowColor }]}>{item.price}</Text>
+              <Text style={styles.mktListingSeller}>{item.seller}</Text>
+              <View style={styles.mktListingActions}>
+                <TouchableOpacity
+                  activeOpacity={ui.actionOpacity}
+                  onPress={() => toggleLike(item.id)}
+                  style={styles.mktLikeButton}
+                >
+                  <Text style={[styles.mktLikeText, liked && { color: ui.glowColor }]}>
+                    {liked ? "♥" : "♡"} {item.likes + (liked ? 1 : 0)}
+                  </Text>
+                </TouchableOpacity>
+                <TouchableOpacity
+                  activeOpacity={ui.actionOpacity}
+                  onPress={() => ui.playUiAction()}
+                  style={styles.mktLikeButton}
+                >
+                  <Text style={styles.mktLikeText}>🔖</Text>
+                </TouchableOpacity>
+              </View>
+            </TouchableOpacity>
+          );
+        })}
+      </View>
+
+      {/* Make home realm button */}
+      <TouchableOpacity
+        style={[styles.secondaryButton, profile.homeRealm === "marketplace" && styles.secondaryButtonDisabled]}
+        onPress={() => { ui.playUiAction(); onMakeHome("marketplace"); }}
+      >
+        <Text style={styles.secondaryButtonText}>
+          {profile.homeRealm === "marketplace" ? "Home realm selected" : "Make home realm"}
+        </Text>
+      </TouchableOpacity>
+    </View>
+  );
+}
+
 function RealmsScreen({
   profile,
   selectedRealm,
@@ -953,77 +1201,81 @@ function RealmsScreen({
         })}
       </ScrollView>
 
-      <View style={[styles.realmDetail, shadow, { borderColor: ui.primaryColor }]}> 
-        <Text style={[styles.realmDetailIcon, { color: ui.glowColor }]}>{selectedRealm.icon}</Text>
-        <Text style={styles.realmDetailTitle}>{selectedRealm.title}</Text>
-        <Text style={[styles.realmPromise, { color: ui.glowColor }]}>{selectedRealm.promise}</Text>
-        <Text style={styles.bodyText}>{selectedRealm.description}</Text>
+      {selectedRealm.key === "marketplace" ? (
+        <MarketplaceRealmView profile={profile} onMakeHome={onMakeHome} />
+      ) : (
+        <View style={[styles.realmDetail, shadow, { borderColor: ui.primaryColor }]}>
+          <Text style={[styles.realmDetailIcon, { color: ui.glowColor }]}>{selectedRealm.icon}</Text>
+          <Text style={styles.realmDetailTitle}>{selectedRealm.title}</Text>
+          <Text style={[styles.realmPromise, { color: ui.glowColor }]}>{selectedRealm.promise}</Text>
+          <Text style={styles.bodyText}>{selectedRealm.description}</Text>
 
-        <ContentCard>
-          <Text style={styles.cardKicker}>ENVIRONMENT MISSION</Text>
-          <Text style={styles.cardTitle}>{environment.mission}</Text>
-          <Text style={styles.bodyText}>{environment.atmosphere}</Text>
-        </ContentCard>
+          <ContentCard>
+            <Text style={styles.cardKicker}>ENVIRONMENT MISSION</Text>
+            <Text style={styles.cardTitle}>{environment.mission}</Text>
+            <Text style={styles.bodyText}>{environment.atmosphere}</Text>
+          </ContentCard>
 
-        <SectionTitle
-          title="Environment Modules"
-          subtitle="Each realm ships with a complete operating environment, not just a single feed."
-        />
+          <SectionTitle
+            title="Environment Modules"
+            subtitle="Each realm ships with a complete operating environment, not just a single feed."
+          />
 
-        {environment.modules.map((module) => (
-          <ContentCard key={module.name}>
-            <Text style={styles.cardKicker}>MODULE</Text>
-            <Text style={styles.cardTitle}>{module.name}</Text>
-            <Text style={styles.bodyText}>{module.description}</Text>
-            <View style={styles.featureList}>
-              {module.capabilities.map((capability) => (
-                <View key={capability} style={styles.featureRow}>
-                  <Text style={[styles.featureBullet, { color: ui.glowColor }]}>◆</Text>
-                  <Text style={styles.featureText}>{capability}</Text>
-                </View>
-              ))}
+          {environment.modules.map((module) => (
+            <ContentCard key={module.name}>
+              <Text style={styles.cardKicker}>MODULE</Text>
+              <Text style={styles.cardTitle}>{module.name}</Text>
+              <Text style={styles.bodyText}>{module.description}</Text>
+              <View style={styles.featureList}>
+                {module.capabilities.map((capability) => (
+                  <View key={capability} style={styles.featureRow}>
+                    <Text style={[styles.featureBullet, { color: ui.glowColor }]}>◆</Text>
+                    <Text style={styles.featureText}>{capability}</Text>
+                  </View>
+                ))}
+              </View>
+            </ContentCard>
+          ))}
+
+          <ContentCard>
+            <Text style={styles.cardKicker}>SEAMLESS BLEND PATHS</Text>
+            <Text style={styles.bodyText}>
+              {ui.blendEnabled
+                ? "Cross-realm transitions are active. Modules can hand off context into connected realms."
+                : "Cross-realm transitions are paused. Realms currently operate in isolated mode."}
+            </Text>
+            <View style={styles.realmChipWrap}>
+              {environment.blendTargets.map((targetKey) => {
+                const target = realms.find((realm) => realm.key === targetKey) ?? realms[0];
+
+                return (
+                  <View key={target.key} style={[styles.realmChip, { borderColor: ui.primaryColor }]}>
+                    <Text style={[styles.realmChipText, { color: colors.boneWhite }]}>{target.shortTitle}</Text>
+                  </View>
+                );
+              })}
             </View>
           </ContentCard>
-        ))}
 
-        <ContentCard>
-          <Text style={styles.cardKicker}>SEAMLESS BLEND PATHS</Text>
-          <Text style={styles.bodyText}>
-            {ui.blendEnabled
-              ? "Cross-realm transitions are active. Modules can hand off context into connected realms."
-              : "Cross-realm transitions are paused. Realms currently operate in isolated mode."}
-          </Text>
-          <View style={styles.realmChipWrap}>
-            {environment.blendTargets.map((targetKey) => {
-              const target = realms.find((realm) => realm.key === targetKey) ?? realms[0];
-
-              return (
-                <View key={target.key} style={[styles.realmChip, { borderColor: ui.primaryColor }]}> 
-                  <Text style={[styles.realmChipText, { color: colors.boneWhite }]}>{target.shortTitle}</Text>
-                </View>
-              );
-            })}
+          <View style={styles.featureList}>
+            {selectedRealm.features.map((feature) => (
+              <View key={feature} style={styles.featureRow}>
+                <Text style={styles.featureBullet}>◆</Text>
+                <Text style={styles.featureText}>{feature}</Text>
+              </View>
+            ))}
           </View>
-        </ContentCard>
 
-        <View style={styles.featureList}>
-          {selectedRealm.features.map((feature) => (
-            <View key={feature} style={styles.featureRow}>
-              <Text style={styles.featureBullet}>◆</Text>
-              <Text style={styles.featureText}>{feature}</Text>
-            </View>
-          ))}
+          <TouchableOpacity
+            style={[styles.secondaryButton, profile.homeRealm === selectedRealm.key && styles.secondaryButtonDisabled]}
+            onPress={() => onMakeHome(selectedRealm.key)}
+          >
+            <Text style={styles.secondaryButtonText}>
+              {profile.homeRealm === selectedRealm.key ? "Home realm selected" : "Make home realm"}
+            </Text>
+          </TouchableOpacity>
         </View>
-
-        <TouchableOpacity
-          style={[styles.secondaryButton, profile.homeRealm === selectedRealm.key && styles.secondaryButtonDisabled]}
-          onPress={() => onMakeHome(selectedRealm.key)}
-        >
-          <Text style={styles.secondaryButtonText}>
-            {profile.homeRealm === selectedRealm.key ? "Home realm selected" : "Make home realm"}
-          </Text>
-        </TouchableOpacity>
-      </View>
+      )}
 
       <ContentCard>
         <Text style={styles.cardKicker}>CATEGORY</Text>
@@ -2354,5 +2606,199 @@ const styles = StyleSheet.create({
     color: colors.boneWhite,
     fontSize: 24,
     fontWeight: "900"
+  },
+  mktChipRow: {
+    gap: spacing.sm,
+    paddingBottom: spacing.md
+  },
+  mktFilterChip: {
+    borderRadius: 999,
+    borderWidth: 1,
+    borderColor: colors.borderBlack,
+    backgroundColor: colors.deepBlack,
+    paddingHorizontal: spacing.md,
+    paddingVertical: spacing.xs
+  },
+  mktFilterChipText: {
+    color: colors.mutedGray,
+    fontSize: 12,
+    fontWeight: "800"
+  },
+  mktActiveFilters: {
+    flexDirection: "row",
+    flexWrap: "wrap",
+    alignItems: "center",
+    gap: spacing.sm,
+    marginBottom: spacing.md
+  },
+  mktAnonToggleRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: spacing.xs,
+    backgroundColor: colors.deepBlack,
+    borderRadius: 999,
+    borderWidth: 1,
+    borderColor: colors.borderBlack,
+    paddingHorizontal: spacing.sm,
+    paddingVertical: 4
+  },
+  mktAnonToggleLabel: {
+    color: colors.mutedGray,
+    fontSize: 12,
+    fontWeight: "800"
+  },
+  mktHeroCard: {
+    backgroundColor: colors.cardBlack,
+    borderRadius: radius.xl,
+    padding: spacing.lg,
+    borderWidth: 1,
+    marginBottom: spacing.md
+  },
+  mktHeroBadgeRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
+    marginBottom: spacing.sm
+  },
+  mktAnonBadge: {
+    borderRadius: 999,
+    paddingHorizontal: spacing.sm,
+    paddingVertical: 4
+  },
+  mktAnonBadgeText: {
+    color: colors.boneWhite,
+    fontSize: 11,
+    fontWeight: "900",
+    letterSpacing: 0.5
+  },
+  mktCategoryTag: {
+    fontSize: 11,
+    fontWeight: "900",
+    letterSpacing: 1.4,
+    textTransform: "uppercase"
+  },
+  mktHeroIcon: {
+    fontSize: 42,
+    marginBottom: spacing.sm
+  },
+  mktHeroTitle: {
+    color: colors.boneWhite,
+    fontSize: 22,
+    fontWeight: "900",
+    lineHeight: 28,
+    marginBottom: spacing.xs
+  },
+  mktHeroPrice: {
+    fontSize: 18,
+    fontWeight: "900",
+    marginBottom: spacing.sm
+  },
+  mktHeroDesc: {
+    color: colors.softGray,
+    fontSize: 14,
+    lineHeight: 22,
+    marginBottom: spacing.sm
+  },
+  mktSellerTag: {
+    color: colors.mutedGray,
+    fontSize: 12,
+    fontWeight: "700",
+    marginBottom: spacing.md
+  },
+  mktCtaButton: {
+    borderRadius: radius.md,
+    borderWidth: 1,
+    paddingVertical: 12,
+    alignItems: "center"
+  },
+  mktCtaButtonText: {
+    color: colors.boneWhite,
+    fontWeight: "900",
+    fontSize: 14,
+    letterSpacing: 0.5
+  },
+  mktComposerRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: spacing.sm,
+    marginBottom: spacing.sm
+  },
+  mktComposerAvatar: {
+    width: 44,
+    height: 44,
+    borderRadius: 22,
+    alignItems: "center",
+    justifyContent: "center"
+  },
+  mktComposerAvatarText: {
+    color: colors.boneWhite,
+    fontSize: 18,
+    fontWeight: "900"
+  },
+  mktComposerInput: {
+    flex: 1,
+    backgroundColor: colors.deepBlack,
+    borderRadius: radius.md,
+    borderWidth: 1,
+    borderColor: colors.borderBlack,
+    paddingHorizontal: spacing.md,
+    paddingVertical: 12
+  },
+  mktComposerPlaceholder: {
+    color: colors.mutedGray,
+    fontSize: 14
+  },
+  mktComposerChips: {
+    flexDirection: "row",
+    gap: spacing.sm,
+    flexWrap: "wrap"
+  },
+  mktListingGrid: {
+    flexDirection: "row",
+    flexWrap: "wrap",
+    gap: spacing.sm,
+    marginBottom: spacing.md
+  },
+  mktListingCard: {
+    width: "48%",
+    backgroundColor: colors.cardBlack,
+    borderRadius: radius.lg,
+    borderWidth: 1,
+    padding: spacing.md
+  },
+  mktListingIcon: {
+    fontSize: 28,
+    marginBottom: spacing.xs
+  },
+  mktListingTitle: {
+    color: colors.boneWhite,
+    fontSize: 13,
+    fontWeight: "800",
+    lineHeight: 18,
+    marginBottom: spacing.xs
+  },
+  mktListingPrice: {
+    fontSize: 14,
+    fontWeight: "900",
+    marginBottom: spacing.xs
+  },
+  mktListingSeller: {
+    color: colors.mutedGray,
+    fontSize: 11,
+    fontWeight: "700",
+    marginBottom: spacing.sm
+  },
+  mktListingActions: {
+    flexDirection: "row",
+    gap: spacing.sm
+  },
+  mktLikeButton: {
+    paddingVertical: 4,
+    paddingHorizontal: 6
+  },
+  mktLikeText: {
+    color: colors.mutedGray,
+    fontSize: 13,
+    fontWeight: "700"
   }
 });
