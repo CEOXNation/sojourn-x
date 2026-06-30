@@ -141,10 +141,11 @@ export async function syncTrustedContacts(enabled: boolean): Promise<ContactSync
     return previewResult("unavailable", true);
   }
 
-  let ContactsModule: typeof import("expo-contacts") | null = null;
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  let ContactsModule: any = null;
 
   try {
-    ContactsModule = await import("expo-contacts");
+    ContactsModule = await import("expo-contacts" as string);
   } catch {
     return previewResult("unavailable", true);
   }
@@ -173,9 +174,11 @@ export async function syncTrustedContacts(enabled: boolean): Promise<ContactSync
   });
 
   const contacts = response.data
-    .filter((contact) => Boolean(contact.name || contact.firstName || contact.lastName || contact.phoneNumbers?.length))
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    .filter((contact: any) => Boolean(contact.name || contact.firstName || contact.lastName || contact.phoneNumbers?.length))
     .slice(0, MAX_SYNCED_CONTACTS)
-    .map((contact, index) => {
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    .map((contact: any, index: number) => {
       const displayName =
         contact.name || [contact.firstName, contact.lastName].filter(Boolean).join(" ") || `Silent Contact ${index + 1}`;
       const matchState = stateForIndex(index);
