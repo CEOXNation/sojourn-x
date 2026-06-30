@@ -27,8 +27,26 @@ import {
   betaRealmPreviewOrder,
   betaTabs
 } from "./src/data/beta";
-import { realmEnvironments, realms } from "./src/data/realms";
-import { clearKeys, createId, loadJson, saveJson } from "./src/storage";
+import {
+  realmEnvironments,
+  realms,
+  spiritualAstrologicalWeather,
+  spiritualBirthChart,
+  spiritualRuneSet,
+  spiritualTarotDeck
+} from "./src/data/realms";
+import {
+  clearContactSyncCache,
+  clearKeys,
+  createId,
+  loadContactSyncState,
+  loadJson,
+  loadSyncedContacts,
+  saveContactSyncState,
+  saveJson,
+  saveSyncedContacts
+} from "./src/storage";
+import { createEmptyContactSyncState, syncTrustedContacts } from "./src/features/contacts";
 import { colors, radius, shadow, spacing } from "./src/theme";
 import { Analytics } from "@vercel/analytics/react";
 import { SpeedInsights } from "@vercel/speed-insights/react";
