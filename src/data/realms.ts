@@ -173,6 +173,174 @@ export const growthSignals = [
   }
 ];
 
+export const spiritualTarotDeck = [
+  {
+    name: "The Fool",
+    arcana: "Major Arcana · 0",
+    intendedMeaning:
+      "A sacred leap into the unknown where trust, curiosity, and spiritual openness begin the next path.",
+    light: "Fresh starts, innocence, inspired movement.",
+    shadow: "Naivety, impulsive choices, ungrounded risk.",
+    embodiment: "Take one brave step today without forcing the whole map."
+  },
+  {
+    name: "The Magician",
+    arcana: "Major Arcana · I",
+    intendedMeaning:
+      "The channel between spirit and reality; focused intention turns inner vision into lived experience.",
+    light: "Manifestation, willpower, aligned action.",
+    shadow: "Manipulation, scattered focus, ego control.",
+    embodiment: "Choose one intention and match it with one concrete action."
+  },
+  {
+    name: "The High Priestess",
+    arcana: "Major Arcana · II",
+    intendedMeaning:
+      "Inner knowing, mystery, and intuition become the primary source of guidance before outer noise.",
+    light: "Intuition, hidden wisdom, spiritual listening.",
+    shadow: "Emotional withdrawal, secrecy, over-isolation.",
+    embodiment: "Spend ten quiet minutes listening before making a decision."
+  },
+  {
+    name: "The Star",
+    arcana: "Major Arcana · XVII",
+    intendedMeaning:
+      "Divine renewal after challenge; faith and healing return when the soul reconnects with purpose.",
+    light: "Hope, healing, trust in the unfolding.",
+    shadow: "Discouragement, disconnection, spiritual fatigue.",
+    embodiment: "Name one future you still believe in and feed it with care."
+  },
+  {
+    name: "The Moon",
+    arcana: "Major Arcana · XVIII",
+    intendedMeaning:
+      "A descent into the subconscious where fear, dream, and truth must be felt rather than controlled.",
+    light: "Dream intelligence, emotional depth, symbolic messages.",
+    shadow: "Confusion, projection, anxiety loops.",
+    embodiment: "Journal what you feel before trying to explain it."
+  },
+  {
+    name: "Judgement",
+    arcana: "Major Arcana · XX",
+    intendedMeaning:
+      "Spiritual awakening through accountability; you answer the call to become who you were meant to be.",
+    light: "Rebirth, calling, clear self-honesty.",
+    shadow: "Self-criticism, avoidance, fear of transformation.",
+    embodiment: "Release one old identity script and choose a truer one."
+  }
+];
+
+export const spiritualRuneSet = [
+  {
+    name: "Fehu",
+    symbol: "ᚠ",
+    intendedMeaning:
+      "Sacred flow of wealth, vitality, and resources; what you value grows when it is tended with integrity.",
+    light: "Prosperity, movement, earned momentum.",
+    shadow: "Greed, depletion, clinging to control.",
+    embodiment: "Protect your energy and invest it where value is reciprocal."
+  },
+  {
+    name: "Uruz",
+    symbol: "ᚢ",
+    intendedMeaning:
+      "Primal life force and resilience; strength is recovered by inhabiting the body and trusting instinct.",
+    light: "Vital power, courage, grounded stamina.",
+    shadow: "Force without wisdom, rigidity, burnout.",
+    embodiment: "Choose disciplined action over emotional reactivity."
+  },
+  {
+    name: "Ansuz",
+    symbol: "ᚨ",
+    intendedMeaning:
+      "Divine communication, inspired speech, and sacred listening; messages arrive through words and signs.",
+    light: "Wisdom transmission, clarity, inspired expression.",
+    shadow: "Miscommunication, gossip, ignored guidance.",
+    embodiment: "Speak one truth clearly and listen deeply in return."
+  },
+  {
+    name: "Raidho",
+    symbol: "ᚱ",
+    intendedMeaning:
+      "Right-timed journey and soul alignment; movement is blessed when direction and purpose match.",
+    light: "Alignment, pilgrimage, ordered progress.",
+    shadow: "Aimlessness, resistance, disrupted rhythm.",
+    embodiment: "Realign your schedule with your actual priorities."
+  },
+  {
+    name: "Kenaz",
+    symbol: "ᚲ",
+    intendedMeaning:
+      "Torch of insight and transformation; illumination burns away what no longer belongs.",
+    light: "Creative fire, revelation, skill mastery.",
+    shadow: "Blocked creativity, exhaustion, false certainty.",
+    embodiment: "Focus your energy on one craft and refine it with devotion."
+  },
+  {
+    name: "Algiz",
+    symbol: "ᛉ",
+    intendedMeaning:
+      "Protection, higher guidance, and spiritual boundaries; safety rises when your alignment is clean.",
+    light: "Protection, intuitive defense, trusted support.",
+    shadow: "Hypervigilance, isolation, defensive posture.",
+    embodiment: "Set a clear boundary and keep your energy field intentional."
+  }
+];
+
+export const spiritualBirthChart = {
+  identity: {
+    sun: "Scorpio",
+    moon: "Pisces",
+    rising: "Leo",
+    northNode: "Aries"
+  },
+  placements: [
+    {
+      body: "Sun · Scorpio · 8th House",
+      meaning: "Transformation, depth work, emotional alchemy, and fearless truth-seeking."
+    },
+    {
+      body: "Moon · Pisces · 4th House",
+      meaning: "Mystical emotional sensitivity, dream intelligence, and deep ancestral memory."
+    },
+    {
+      body: "Rising · Leo · 1st House",
+      meaning: "Radiant spiritual presence, heart-led leadership, and creative self-expression."
+    },
+    {
+      body: "Mercury · Sagittarius · 5th House",
+      meaning: "Visionary storytelling, philosophical insight, and prophetic creative language."
+    },
+    {
+      body: "Venus · Libra · 3rd House",
+      meaning: "Harmony in communication, relational grace, and beauty through dialogue."
+    },
+    {
+      body: "Mars · Capricorn · 6th House",
+      meaning: "Disciplined action, spiritual work ethic, and practical mastery through routine."
+    }
+  ]
+};
+
+export const spiritualAstrologicalWeather = [
+  {
+    title: "Lunar Phase · Waxing Gibbous",
+    meaning: "Refinement energy is high; tighten intention before the next full-moon reveal."
+  },
+  {
+    title: "Current Season · Cancer",
+    meaning: "Emotional truth and sacred belonging are highlighted across relationship themes."
+  },
+  {
+    title: "Transit Focus · Saturn in Pisces",
+    meaning: "Turn spiritual insight into structure; devotion must become a daily practice."
+  },
+  {
+    title: "Collective Signal · Venus Trine Neptune",
+    meaning: "Art, love, and mysticism are amplified; choose beauty that is also honest."
+  }
+];
+
 export const realmEnvironments: Record<Realm["key"], RealmEnvironment> = {
   anonymous: {
     realmKey: "anonymous",

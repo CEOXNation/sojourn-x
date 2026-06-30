@@ -28,18 +28,7 @@ import {
   betaTabs
 } from "./src/data/beta";
 import { realmEnvironments, realms } from "./src/data/realms";
-import { createEmptyContactSyncState, syncTrustedContacts } from "./src/features/contacts";
-import {
-  clearContactSyncCache,
-  clearKeys,
-  createId,
-  loadContactSyncState,
-  loadJson,
-  loadSyncedContacts,
-  saveContactSyncState,
-  saveJson,
-  saveSyncedContacts
-} from "./src/storage";
+import { clearKeys, createId, loadJson, saveJson } from "./src/storage";
 import { colors, radius, shadow, spacing } from "./src/theme";
 import { Analytics } from "@vercel/analytics/react";
 import { SpeedInsights } from "@vercel/speed-insights/react";
@@ -1143,6 +1132,8 @@ function RealmsScreen({
           </View>
         </ContentCard>
 
+        {selectedRealm.key === "spiritual" && <SpiritualOracleSuite />}
+
         <View style={styles.featureList}>
           {selectedRealm.features.map((feature) => (
             <View key={feature} style={styles.featureRow}>
@@ -1169,6 +1160,145 @@ function RealmsScreen({
           SojournX Beta now keeps a home realm, a preview realm, and a live profile so the category
           is measurable instead of just promised.
         </Text>
+      </ContentCard>
+    </View>
+  );
+}
+
+function SpiritualOracleSuite() {
+  const ui = useUiRuntime();
+  const fallbackTarot = {
+    name: "Deck Offline",
+    arcana: "Major Arcana",
+    intendedMeaning: "Tarot codex is syncing. Return shortly for symbolic guidance.",
+    light: "Pause and breathe.",
+    shadow: "Rushing without reflection.",
+    embodiment: "Ground first, then pull."
+  };
+  const fallbackRune = {
+    name: "Set Offline",
+    symbol: "ᛟ",
+    intendedMeaning: "Rune matrix is syncing. Return shortly for northern wisdom.",
+    light: "Stay receptive.",
+    shadow: "Forcing certainty.",
+    embodiment: "Hold center and wait for clarity."
+  };
+  const [activeTarot, setActiveTarot] = useState(
+    spiritualTarotDeck.length > 0 ? spiritualTarotDeck[0] : fallbackTarot
+  );
+  const [activeRune, setActiveRune] = useState(
+    spiritualRuneSet.length > 0 ? spiritualRuneSet[0] : fallbackRune
+  );
+
+  const pullTarot = () => {
+    if (spiritualTarotDeck.length === 0) {
+      setActiveTarot(fallbackTarot);
+      return;
+    }
+
+    const nextCard = spiritualTarotDeck[Math.floor(Math.random() * spiritualTarotDeck.length)];
+    setActiveTarot(nextCard);
+    ui.playUiAction();
+  };
+
+  const pullRune = () => {
+    if (spiritualRuneSet.length === 0) {
+      setActiveRune(fallbackRune);
+      return;
+    }
+
+    const nextRune = spiritualRuneSet[Math.floor(Math.random() * spiritualRuneSet.length)];
+    setActiveRune(nextRune);
+    ui.playUiAction();
+  };
+
+  return (
+    <View style={styles.spiritualSuiteWrap}>
+      <SectionTitle
+        title="Celestial Oracle Chamber"
+        subtitle="An epic symbolic interface for tarot, runes, and astrological intelligence."
+      />
+
+      <ContentCard>
+        <Text style={styles.cardKicker}>TAROT SIMULATOR</Text>
+        <Text style={styles.spiritualHeadline}>{activeTarot.name}</Text>
+        <Text style={styles.cardMeta}>{activeTarot.arcana}</Text>
+        <Text style={styles.bodyText}>{activeTarot.intendedMeaning}</Text>
+        <View style={styles.featureList}>
+          <Text style={styles.spiritualMeaning}>Light Path: {activeTarot.light}</Text>
+          <Text style={styles.spiritualMeaning}>Shadow Path: {activeTarot.shadow}</Text>
+          <Text style={styles.spiritualMeaning}>Embodiment: {activeTarot.embodiment}</Text>
+        </View>
+        <PrimaryButton label="Draw Tarot Card" onPress={pullTarot} />
+      </ContentCard>
+
+      <ContentCard>
+        <Text style={styles.cardKicker}>RUNE SIMULATOR</Text>
+        <Text style={styles.spiritualRuneSymbol}>{activeRune.symbol}</Text>
+        <Text style={styles.spiritualHeadline}>{activeRune.name}</Text>
+        <Text style={styles.bodyText}>{activeRune.intendedMeaning}</Text>
+        <View style={styles.featureList}>
+          <Text style={styles.spiritualMeaning}>Light Path: {activeRune.light}</Text>
+          <Text style={styles.spiritualMeaning}>Shadow Path: {activeRune.shadow}</Text>
+          <Text style={styles.spiritualMeaning}>Embodiment: {activeRune.embodiment}</Text>
+        </View>
+        <PrimaryButton label="Cast Rune" onPress={pullRune} />
+      </ContentCard>
+
+      <ContentCard>
+        <Text style={styles.cardKicker}>BIRTH CHART MATRIX</Text>
+        <Text style={styles.spiritualHeadline}>
+          Sun {spiritualBirthChart.identity.sun} · Moon {spiritualBirthChart.identity.moon} · Rising{" "}
+          {spiritualBirthChart.identity.rising}
+        </Text>
+        <Text style={styles.spiritualMeaning}>North Node: {spiritualBirthChart.identity.northNode}</Text>
+
+        <View style={styles.featureList}>
+          {spiritualBirthChart.placements.map((placement) => (
+            <View key={placement.body} style={styles.spiritualPlacement}>
+              <Text style={styles.spiritualPlacementTitle}>{placement.body}</Text>
+              <Text style={styles.bodyText}>{placement.meaning}</Text>
+            </View>
+          ))}
+        </View>
+      </ContentCard>
+
+      <ContentCard>
+        <Text style={styles.cardKicker}>ASTROLOGICAL WEATHER</Text>
+        <View style={styles.featureList}>
+          {spiritualAstrologicalWeather.map((signal) => (
+            <View key={signal.title} style={styles.spiritualPlacement}>
+              <Text style={styles.spiritualPlacementTitle}>{signal.title}</Text>
+              <Text style={styles.bodyText}>{signal.meaning}</Text>
+            </View>
+          ))}
+        </View>
+      </ContentCard>
+
+      <ContentCard>
+        <Text style={styles.cardKicker}>TAROT CODEX · INTENDED MEANINGS</Text>
+        <View style={styles.featureList}>
+          {spiritualTarotDeck.map((card) => (
+            <View key={card.name} style={styles.spiritualPlacement}>
+              <Text style={styles.spiritualPlacementTitle}>{card.name}</Text>
+              <Text style={styles.bodyText}>{card.intendedMeaning}</Text>
+            </View>
+          ))}
+        </View>
+      </ContentCard>
+
+      <ContentCard>
+        <Text style={styles.cardKicker}>RUNE CODEX · INTENDED MEANINGS</Text>
+        <View style={styles.featureList}>
+          {spiritualRuneSet.map((rune) => (
+            <View key={rune.name} style={styles.spiritualPlacement}>
+              <Text style={styles.spiritualPlacementTitle}>
+                {rune.symbol} {rune.name}
+              </Text>
+              <Text style={styles.bodyText}>{rune.intendedMeaning}</Text>
+            </View>
+          ))}
+        </View>
       </ContentCard>
     </View>
   );
@@ -2872,5 +3002,39 @@ const styles = StyleSheet.create({
     color: colors.boneWhite,
     fontSize: 24,
     fontWeight: "900"
+  },
+  spiritualSuiteWrap: {
+    marginTop: spacing.md
+  },
+  spiritualHeadline: {
+    color: colors.boneWhite,
+    fontSize: 22,
+    fontWeight: "900",
+    lineHeight: 30
+  },
+  spiritualRuneSymbol: {
+    color: "#A5B4FC",
+    fontSize: 44,
+    marginBottom: spacing.xs
+  },
+  spiritualMeaning: {
+    color: "#D1D5FF",
+    fontSize: 13,
+    lineHeight: 20
+  },
+  spiritualPlacement: {
+    borderWidth: 1,
+    borderColor: "rgba(165,180,252,0.35)",
+    backgroundColor: "rgba(79,70,229,0.12)",
+    borderRadius: radius.md,
+    padding: spacing.sm
+  },
+  spiritualPlacementTitle: {
+    color: "#C7D2FE",
+    fontSize: 12,
+    fontWeight: "800",
+    letterSpacing: 0.4,
+    marginBottom: 6,
+    textTransform: "uppercase"
   }
 });
