@@ -5,6 +5,8 @@ import {
   Alert,
   Easing,
   Image,
+  ActivityIndicator,
+  Platform,
   SafeAreaView,
   ScrollView,
   StatusBar,
@@ -25,21 +27,21 @@ import {
   betaRealmPreviewOrder,
   betaTabs
 } from "./src/data/beta";
-import { spiritualAstrologicalWeather,
-spiritualBirthChart,
-spiritualRuneSet,
-spiritualTarotDeck,
-realmEnvironments, realms } from "./src/data/realms";
+import { realmEnvironments, realms } from "./src/data/realms";
 import { clearKeys, createId, loadJson, saveJson } from "./src/storage";
 import { colors, radius, shadow, spacing } from "./src/theme";
+import { Analytics } from "@vercel/analytics/react";
+import { SpeedInsights } from "@vercel/speed-insights/react";
 import type {
   BetaProfile,
   BetaTab,
+  ContactSyncState,
   JournalEntry,
   PulsePost,
   Realm,
   RealmEnvironment,
   RealmKey,
+  SyncedContact,
   UiActionStyle,
   UiAccent,
   UiCorners,
@@ -65,12 +67,14 @@ const defaultProfile: BetaProfile = {
   handle: "",
   avatar: "X",
   status: "Emerging",
+  phoneNumber: "",
   pronouns: "they/them",
   bio: "",
   location: "",
   website: "",
   homeRealm: "anonymous",
   privateMode: true,
+  contactsSyncEnabled: false,
   onboardingComplete: false
 };
 
@@ -145,9 +149,9 @@ const actionSoundLibrary: Record<UiSoundPack, number> = {
 };
 
 const realmVisualThemes: Record<RealmKey, { background: string; wash: string; orb: string }> = {
-  anonymous: { background: "#090A12", wash: "rgba(118,88,255,0.16)", orb: "#6D28D9" },
+  anonymous: { background: colors.shadowInk, wash: "rgba(139,92,246,0.16)", orb: colors.phantomViolet },
   social: { background: "#0D0B12", wash: "rgba(255,111,97,0.18)", orb: "#EA580C" },
-  messaging: { background: "#071015", wash: "rgba(56,189,248,0.17)", orb: "#0284C7" },
+  messaging: { background: "#071015", wash: "rgba(56,189,248,0.17)", orb: colors.phantomBlue },
   marketplace: { background: "#11110A", wash: "rgba(250,204,21,0.16)", orb: "#CA8A04" },
   spiritual: { background: "#0A0E15", wash: "rgba(148,163,255,0.18)", orb: "#6366F1" },
   growth: { background: "#0A120D", wash: "rgba(34,197,94,0.16)", orb: "#16A34A" }
@@ -209,6 +213,9 @@ export default function BetaApp() {
   const [uiPreferences, setUiPreferences] = useState<UiPreferences>(defaultUiPreferences);
   const [blendEnabled, setBlendEnabled] = useState(true);
   const [selectedRealmKey, setSelectedRealmKey] = useState<RealmKey>(defaultProfile.homeRealm);
+  const [syncedContacts, setSyncedContacts] = useState<SyncedContact[]>([]);
+  const [contactSyncState, setContactSyncState] = useState<ContactSyncState>(createEmptyContactSyncState());
+  const [syncingContacts, setSyncingContacts] = useState(false);
   const [pulseBody, setPulseBody] = useState("");
   const [pulseMood, setPulseMood] = useState(defaultPulseMood);
   const [pulseRealmKey, setPulseRealmKey] = useState<RealmKey>(defaultProfile.homeRealm);
@@ -219,12 +226,15 @@ export default function BetaApp() {
     let cancelled = false;
 
     const loadState = async () => {
-      const [storedProfile, storedPosts, storedJournal, storedUi, storedBlend] = await Promise.all([
+      const [storedProfile, storedPosts, storedJournal, storedUi, storedBlend, storedContacts, storedContactState] =
+        await Promise.all([
         loadJson<BetaProfile | null>(STORAGE_KEYS.profile, null),
         loadJson<PulsePost[] | null>(STORAGE_KEYS.pulses, null),
         loadJson<JournalEntry[] | null>(STORAGE_KEYS.journal, null),
         loadJson<UiPreferences | null>(STORAGE_KEYS.ui, null),
-        loadJson<boolean | null>(STORAGE_KEYS.blend, null)
+        loadJson<boolean | null>(STORAGE_KEYS.blend, null),
+        loadSyncedContacts(),
+        loadContactSyncState(createEmptyContactSyncState())
       ]);
 
       if (cancelled) {
@@ -253,6 +263,9 @@ export default function BetaApp() {
         setBlendEnabled(storedBlend);
       }
 
+      setSyncedContacts(storedContacts);
+      setContactSyncState(storedContactState);
+
       setHydrated(true);
     };
 
@@ -273,14 +286,54 @@ export default function BetaApp() {
       saveJson(STORAGE_KEYS.pulses, posts),
       saveJson(STORAGE_KEYS.journal, journalEntries),
       saveJson(STORAGE_KEYS.ui, uiPreferences),
-      saveJson(STORAGE_KEYS.blend, blendEnabled)
+      saveJson(STORAGE_KEYS.blend, blendEnabled),
+      saveSyncedContacts(syncedContacts),
+      saveContactSyncState(contactSyncState)
     ]);
-  }, [hydrated, profile, posts, journalEntries, uiPreferences, blendEnabled]);
+  }, [hydrated, profile, posts, journalEntries, uiPreferences, blendEnabled, syncedContacts, contactSyncState]);
 
   useEffect(() => {
     setPulseRealmKey(profile.homeRealm);
     setSelectedRealmKey(profile.homeRealm);
   }, [profile.homeRealm]);
+
+  const handleContactSync = async () => {
+    if (syncingContacts) {
+      return;
+    }
+
+    if (!profile.contactsSyncEnabled) {
+      setSyncedContacts([]);
+      setContactSyncState(createEmptyContactSyncState());
+      return;
+    }
+
+    setSyncingContacts(true);
+
+    try {
+      const result = await syncTrustedContacts(true);
+      setSyncedContacts(result.contacts);
+      setContactSyncState(result.state);
+    } finally {
+      setSyncingContacts(false);
+    }
+  };
+
+  useEffect(() => {
+    if (!hydrated) {
+      return;
+    }
+
+    if (!profile.contactsSyncEnabled) {
+      setSyncedContacts([]);
+      setContactSyncState(createEmptyContactSyncState());
+      return;
+    }
+
+    if (!syncingContacts && !contactSyncState.lastSyncedAt) {
+      void handleContactSync();
+    }
+  }, [hydrated, profile.contactsSyncEnabled, contactSyncState.lastSyncedAt]);
 
   const selectedRealm = useMemo(
     () => realms.find((realm) => realm.key === selectedRealmKey) ?? realms[0],
@@ -421,6 +474,7 @@ export default function BetaApp() {
 
         <View style={[styles.appShell, { backgroundColor: activeRealmTheme.background }]}> 
           <View style={[styles.realmThemeWash, { backgroundColor: activeRealmTheme.wash }]} />
+          <View style={[styles.realmThemeOrb, { backgroundColor: activeRealmTheme.orb }]} />
           <Header profile={profile} />
           <Nav activeTab={activeTab} setActiveTab={setActiveTab} />
 
@@ -439,6 +493,10 @@ export default function BetaApp() {
                 homeRealm={homeRealm}
                 posts={posts}
                 journalEntries={journalEntries}
+                syncedContacts={syncedContacts}
+                contactSyncState={contactSyncState}
+                syncingContacts={syncingContacts}
+                onSyncContacts={() => void handleContactSync()}
                 onJump={(tab) => setActiveTab(tab)}
               />
             )}
@@ -484,6 +542,10 @@ export default function BetaApp() {
                 profile={profile}
                 selectedRealm={selectedRealm}
                 environment={realmEnvironments[selectedRealm.key]}
+                syncedContacts={syncedContacts}
+                contactSyncState={contactSyncState}
+                syncingContacts={syncingContacts}
+                onSyncContacts={() => void handleContactSync()}
                 setSelectedRealmKey={setSelectedRealmKey}
                 onMakeHome={(realmKey) => setProfile((current) => ({ ...current, homeRealm: realmKey }))}
               />
@@ -523,6 +585,10 @@ export default function BetaApp() {
                 setProfile={setProfile}
                 posts={posts}
                 entries={journalEntries}
+                syncedContacts={syncedContacts}
+                contactSyncState={contactSyncState}
+                syncingContacts={syncingContacts}
+                onSyncContacts={() => void handleContactSync()}
               />
             )}
 
@@ -530,10 +596,13 @@ export default function BetaApp() {
               <SettingsScreen
                 profile={profile}
                 setProfile={setProfile}
+                contactSyncState={contactSyncState}
+                syncingContacts={syncingContacts}
+                onSyncContacts={() => void handleContactSync()}
                 onReset={() => {
                 Alert.alert(
                   "Reset local vault?",
-                  "This clears the beta profile, pulse feed, and journal from this device.",
+                  "This clears the beta profile, pulse feed, journal, and synced contacts from this device.",
                   [
                     { text: "Cancel", style: "cancel" },
                     {
@@ -547,11 +616,15 @@ export default function BetaApp() {
                           STORAGE_KEYS.ui,
                           STORAGE_KEYS.blend
                         ]);
+                        await clearContactSyncCache();
                         setProfile(defaultProfile);
                         setPosts(betaPulseSeed);
                         setJournalEntries(betaJournalSeed);
                         setUiPreferences(defaultUiPreferences);
                         setBlendEnabled(true);
+                        setSyncedContacts([]);
+                        setContactSyncState(createEmptyContactSyncState());
+                        setSyncingContacts(false);
                         setActiveTab("Home");
                         setSelectedRealmKey(defaultProfile.homeRealm);
                         setPulseRealmKey(defaultProfile.homeRealm);
@@ -575,7 +648,17 @@ export default function BetaApp() {
     );
   }
 
-  return <UiRuntimeContext.Provider value={uiRuntime}>{content}</UiRuntimeContext.Provider>;
+  return (
+    <UiRuntimeContext.Provider value={uiRuntime}>
+      {content}
+      {Platform.OS === "web" && (
+        <>
+          <Analytics />
+          <SpeedInsights />
+        </>
+      )}
+    </UiRuntimeContext.Provider>
+  );
 }
 
 function AgeGate({ onEnter }: { onEnter: () => void }) {
@@ -781,6 +864,10 @@ function HomeScreen({
   homeRealm,
   posts,
   journalEntries,
+  syncedContacts,
+  contactSyncState,
+  syncingContacts,
+  onSyncContacts,
   onJump
 }: {
   profile: BetaProfile;
@@ -788,6 +875,10 @@ function HomeScreen({
   homeRealm: Realm;
   posts: PulsePost[];
   journalEntries: JournalEntry[];
+  syncedContacts: SyncedContact[];
+  contactSyncState: ContactSyncState;
+  syncingContacts: boolean;
+  onSyncContacts: () => void;
   onJump: (tab: BetaTab) => void;
 }) {
   const recentPulse = posts[0];
@@ -826,6 +917,16 @@ function HomeScreen({
         <LaunchButton label="Pulse" hint="Broadcast a thought" onPress={() => onJump("Pulse")} />
         <LaunchButton label="Journal" hint="Capture an insight" onPress={() => onJump("Journal")} />
       </View>
+
+      <SectionTitle title="Ghost Circle" subtitle="Signal-like contact sync for the people you trust most." />
+
+      <ContactSyncCard
+        profile={profile}
+        contactSyncState={contactSyncState}
+        syncedContacts={syncedContacts}
+        syncingContacts={syncingContacts}
+        onSyncContacts={onSyncContacts}
+      />
 
       <SectionTitle title="Vault Checklist" subtitle="Proof that the beta is actually doing work." />
 
@@ -919,12 +1020,20 @@ function RealmsScreen({
   profile,
   selectedRealm,
   environment,
+  syncedContacts,
+  contactSyncState,
+  syncingContacts,
+  onSyncContacts,
   setSelectedRealmKey,
   onMakeHome
 }: {
   profile: BetaProfile;
   selectedRealm: Realm;
   environment: RealmEnvironment;
+  syncedContacts: SyncedContact[];
+  contactSyncState: ContactSyncState;
+  syncingContacts: boolean;
+  onSyncContacts: () => void;
   setSelectedRealmKey: React.Dispatch<React.SetStateAction<RealmKey>>;
   onMakeHome: (realmKey: RealmKey) => void;
 }) {
@@ -968,6 +1077,19 @@ function RealmsScreen({
           <Text style={styles.cardTitle}>{environment.mission}</Text>
           <Text style={styles.bodyText}>{environment.atmosphere}</Text>
         </ContentCard>
+
+        {selectedRealm.key === "anonymous" && (
+          <ContactSyncCard
+            profile={profile}
+            contactSyncState={contactSyncState}
+            syncedContacts={syncedContacts}
+            syncingContacts={syncingContacts}
+            onSyncContacts={onSyncContacts}
+            title="Veiled Contacts"
+            kicker="ANONYMITY UPGRADE"
+            subtitle="Keep your trusted circle close without exposing a public graph."
+          />
+        )}
 
         <SectionTitle
           title="Environment Modules"
@@ -1233,12 +1355,20 @@ function ProfileScreen({
   profile,
   setProfile,
   posts,
-  entries
+  entries,
+  syncedContacts,
+  contactSyncState,
+  syncingContacts,
+  onSyncContacts
 }: {
   profile: BetaProfile;
   setProfile: React.Dispatch<React.SetStateAction<BetaProfile>>;
   posts: PulsePost[];
   entries: JournalEntry[];
+  syncedContacts: SyncedContact[];
+  contactSyncState: ContactSyncState;
+  syncingContacts: boolean;
+  onSyncContacts: () => void;
 }) {
   const ui = useUiRuntime();
 
@@ -1302,6 +1432,13 @@ function ProfileScreen({
           placeholder="Rebuilding in public"
         />
 
+        <FieldLabel label="Relay Number" helper="Private contact anchor for trusted-circle discovery." />
+        <InputField
+          value={profile.phoneNumber}
+          onChangeText={(phoneNumber) => setProfile((current) => ({ ...current, phoneNumber }))}
+          placeholder="+1 555 010 2020"
+        />
+
         <FieldLabel label="Pronouns" helper="Optional identity marker." />
         <InputField
           value={profile.pronouns}
@@ -1331,6 +1468,19 @@ function ProfileScreen({
           multiline
         />
       </ContentCard>
+
+      <ContactSyncCard
+        profile={profile}
+        contactSyncState={contactSyncState}
+        syncedContacts={syncedContacts}
+        syncingContacts={syncingContacts}
+        onSyncContacts={onSyncContacts}
+        showToggle
+        onToggle={(contactsSyncEnabled) => setProfile((current) => ({ ...current, contactsSyncEnabled }))}
+        title="Trusted Circle"
+        kicker="SIGNAL-LIKE CONTACT LAYER"
+        subtitle="Sync your device contacts into a quiet, consent-first circle."
+      />
 
       <ContentCard>
         <Text style={styles.cardKicker}>PROFILE PREVIEW</Text>
@@ -1367,10 +1517,16 @@ function ProfileScreen({
 function SettingsScreen({
   profile,
   setProfile,
+  contactSyncState,
+  syncingContacts,
+  onSyncContacts,
   onReset
 }: {
   profile: BetaProfile;
   setProfile: React.Dispatch<React.SetStateAction<BetaProfile>>;
+  contactSyncState: ContactSyncState;
+  syncingContacts: boolean;
+  onSyncContacts: () => void;
   onReset: () => void;
 }) {
   const ui = useUiRuntime();
@@ -1415,6 +1571,36 @@ function SettingsScreen({
           value={profile.privateMode}
           onValueChange={(privateMode) => setProfile((current) => ({ ...current, privateMode }))}
         />
+      </ContentCard>
+
+      <ContentCard>
+        <Text style={styles.cardKicker}>CONTACT VEIL</Text>
+        <Text style={styles.cardTitle}>Trusted-circle sync stays local-first.</Text>
+        <Text style={styles.bodyText}>
+          Keep Signal-like contact discovery inside the anonymity realm without creating a public graph.
+        </Text>
+
+        <FieldLabel label="Sync Contacts" helper="Request device access only when you want to refresh the circle." />
+        <ToggleRow
+          label={profile.contactsSyncEnabled ? "Sync Enabled" : "Sync Disabled"}
+          description={contactSyncSummary(contactSyncState)}
+          value={profile.contactsSyncEnabled}
+          onValueChange={(contactsSyncEnabled) => setProfile((current) => ({ ...current, contactsSyncEnabled }))}
+        />
+
+        <TouchableOpacity
+          style={[styles.secondaryButton, { borderColor: ui.primaryColor }]}
+          activeOpacity={ui.actionOpacity}
+          onPress={() => onSyncContacts()}
+        >
+          <Text style={styles.secondaryButtonText}>
+            {syncingContacts
+              ? "Syncing trusted circle..."
+              : profile.contactsSyncEnabled
+                ? "Sync contacts now"
+                : "Turn on sync above"}
+          </Text>
+        </TouchableOpacity>
       </ContentCard>
 
       <ContentCard>
@@ -1682,6 +1868,123 @@ function ChecklistCard({ title, detail }: { title: string; detail: string }) {
   );
 }
 
+function ContactSyncCard({
+  profile,
+  contactSyncState,
+  syncedContacts,
+  syncingContacts,
+  onSyncContacts,
+  showToggle,
+  onToggle,
+  title = "Ghost Circle",
+  kicker = "SYNCED CONTACTS",
+  subtitle = "Trusted contacts are staged for private intros and secure follow-up."
+}: {
+  profile: BetaProfile;
+  contactSyncState: ContactSyncState;
+  syncedContacts: SyncedContact[];
+  syncingContacts: boolean;
+  onSyncContacts: () => void;
+  showToggle?: boolean;
+  onToggle?: (value: boolean) => void;
+  title?: string;
+  kicker?: string;
+  subtitle?: string;
+}) {
+  const ui = useUiRuntime();
+  const activeContacts = syncedContacts.slice(0, 4);
+  const hasRelayNumber = hasValidRelayNumber(profile.phoneNumber);
+  const relayNumber = normalizeRelayNumber(profile.phoneNumber);
+
+  return (
+    <ContentCard>
+      <Text style={[styles.cardKicker, { color: colors.ghostLilac }]}>{kicker}</Text>
+      <Text style={styles.cardTitle}>{title}</Text>
+      <Text style={styles.bodyText}>{subtitle}</Text>
+
+      <View style={styles.contactVaultStats}>
+        <View style={[styles.contactVaultMetric, { borderColor: ui.glowColor }]}>
+          <Text style={styles.contactVaultLabel}>Permission</Text>
+          <Text style={styles.contactVaultValue}>{contactPermissionLabel(contactSyncState.permission)}</Text>
+        </View>
+        <View style={[styles.contactVaultMetric, { borderColor: ui.glowColor }]}>
+          <Text style={styles.contactVaultLabel}>Imported</Text>
+          <Text style={styles.contactVaultValue}>{String(contactSyncState.importedCount)}</Text>
+        </View>
+      </View>
+
+      {showToggle && onToggle ? (
+        <ToggleRow
+          label={profile.contactsSyncEnabled ? "Trusted circle active" : "Trusted circle paused"}
+          description={contactSyncSummary(contactSyncState)}
+          value={profile.contactsSyncEnabled}
+          onValueChange={onToggle}
+        />
+      ) : (
+        <Text style={styles.helperNote}>{contactSyncSummary(contactSyncState)}</Text>
+      )}
+
+      {hasRelayNumber && (
+        <Text style={[styles.helperNote, styles.contactRelayLabel]}>Relay anchor: {relayNumber}</Text>
+      )}
+
+      <TouchableOpacity
+        style={[styles.contactSyncButton, { borderColor: ui.glowColor }]}
+        activeOpacity={ui.actionOpacity}
+        onPress={() => onSyncContacts()}
+      >
+        {syncingContacts ? (
+          <View style={styles.contactSyncButtonInner}>
+            <ActivityIndicator color={colors.boneWhite} size="small" />
+            <Text style={styles.contactSyncButtonText}>Syncing ghost circle...</Text>
+          </View>
+        ) : (
+          <Text style={styles.contactSyncButtonText}>
+            {profile.contactsSyncEnabled ? "Refresh trusted contacts" : "Turn on sync in Profile or Settings"}
+          </Text>
+        )}
+      </TouchableOpacity>
+
+      {activeContacts.length > 0 ? (
+        <View style={styles.contactList}>
+          {activeContacts.map((contact) => (
+            <View key={contact.id} style={styles.contactRow}>
+              <View style={[styles.contactAvatar, { borderColor: ui.glowColor }]}>
+                <Text style={styles.contactAvatarText}>{contact.initials}</Text>
+              </View>
+              <View style={styles.contactCopy}>
+                <Text style={styles.contactName}>{contact.displayName}</Text>
+                <Text style={styles.contactMeta}>{contact.phoneNumber}</Text>
+                <Text style={styles.contactTrustNote}>{contact.trustNote}</Text>
+              </View>
+              <View
+                style={[
+                  styles.contactStatePill,
+                  contact.matchState === "on-sojourn"
+                    ? styles.contactStateActive
+                    : contact.matchState === "invite-ready"
+                      ? styles.contactStateInvite
+                      : styles.contactStateRelay
+                ]}
+              >
+                <Text style={styles.contactStateText}>{contactStateLabel(contact.matchState)}</Text>
+                <Text style={styles.contactStateMeta}>{contact.lastSeen}</Text>
+              </View>
+            </View>
+          ))}
+        </View>
+      ) : (
+        <View style={styles.contactEmptyState}>
+          <Text style={styles.contactEmptyTitle}>No trusted contacts staged yet.</Text>
+          <Text style={styles.contactEmptyBody}>
+            Turn on sync to pull device contacts into the anonymity realm without exposing them elsewhere.
+          </Text>
+        </View>
+      )}
+    </ContentCard>
+  );
+}
+
 function PulseCard({ post }: { post: PulsePost }) {
   const realm = realms.find((item) => item.key === post.realmKey) ?? realms[0];
 
@@ -1900,6 +2203,58 @@ function SectionTitle({ title, subtitle }: { title: string; subtitle: string }) 
   );
 }
 
+function contactPermissionLabel(permission: ContactSyncState["permission"]): string {
+  switch (permission) {
+    case "granted":
+      return "Granted";
+    case "denied":
+      return "Denied";
+    case "unavailable":
+      return "Preview";
+    default:
+      return "Idle";
+  }
+}
+
+function contactStateLabel(matchState: SyncedContact["matchState"]): string {
+  switch (matchState) {
+    case "on-sojourn":
+      return "On Sojourn";
+    case "invite-ready":
+      return "Invite";
+    default:
+      return "Relay";
+  }
+}
+
+function normalizeRelayNumber(value: string): string {
+  return value.trim().replace(/[^\d+]/g, "");
+}
+
+function hasValidRelayNumber(value: string): boolean {
+  return normalizeRelayNumber(value).replace(/\D/g, "").length >= 7;
+}
+
+function contactSyncSummary(state: ContactSyncState): string {
+  if (!state.enabled) {
+    return "Contact sync is off. Nothing leaves the device until you request a refresh.";
+  }
+
+  if (state.permission === "denied") {
+    return "Permission was denied. Re-enable contact access to rebuild the trusted circle.";
+  }
+
+  if (state.source === "preview") {
+    return "Device sync is unavailable here, so the vault shows a sleek preview circle instead.";
+  }
+
+  if (state.permission === "granted") {
+    return `${state.importedCount} trusted contacts are staged from ${state.deviceContactCount} device entries.`;
+  }
+
+  return "Ready to sync your trusted circle into the anonymity realm.";
+}
+
 function formatRelativeTime(value: string): string {
   const date = new Date(value);
 
@@ -1939,6 +2294,15 @@ const styles = StyleSheet.create({
     right: -40,
     top: 14,
     opacity: 0.9
+  },
+  realmThemeOrb: {
+    position: "absolute",
+    width: 180,
+    height: 180,
+    borderRadius: 90,
+    left: -24,
+    top: 180,
+    opacity: 0.15
   },
   content: {
     padding: spacing.md,
@@ -2249,10 +2613,39 @@ const styles = StyleSheet.create({
   profileIdentityBlock: {
     flex: 1
   },
+  contactRelayLabel: {
+    color: colors.ghostLilac
+  },
   metricGrid: {
     flexDirection: "row",
     flexWrap: "wrap",
     gap: spacing.sm
+  },
+  contactVaultStats: {
+    flexDirection: "row",
+    gap: spacing.sm,
+    marginTop: spacing.md,
+    marginBottom: spacing.md
+  },
+  contactVaultMetric: {
+    flex: 1,
+    borderWidth: 1,
+    borderRadius: radius.md,
+    padding: spacing.md,
+    backgroundColor: "rgba(9,10,18,0.76)"
+  },
+  contactVaultLabel: {
+    color: colors.mistBlue,
+    fontSize: 11,
+    fontWeight: "800",
+    textTransform: "uppercase",
+    letterSpacing: 1.1
+  },
+  contactVaultValue: {
+    color: colors.boneWhite,
+    fontSize: 18,
+    fontWeight: "900",
+    marginTop: 6
   },
   metricCard: {
     width: "48%",
@@ -2425,6 +2818,26 @@ const styles = StyleSheet.create({
     fontWeight: "800",
     fontSize: 14
   },
+  contactSyncButton: {
+    marginTop: spacing.md,
+    marginBottom: spacing.md,
+    borderRadius: radius.md,
+    paddingVertical: 14,
+    alignItems: "center",
+    justifyContent: "center",
+    backgroundColor: "rgba(139,92,246,0.16)",
+    borderWidth: 1
+  },
+  contactSyncButtonInner: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: spacing.sm
+  },
+  contactSyncButtonText: {
+    color: colors.boneWhite,
+    fontSize: 14,
+    fontWeight: "800"
+  },
   pulseMetaRow: {
     flexDirection: "row",
     justifyContent: "space-between",
@@ -2478,6 +2891,96 @@ const styles = StyleSheet.create({
     fontSize: 12,
     lineHeight: 17,
     marginTop: 4
+  },
+  contactList: {
+    gap: spacing.sm
+  },
+  contactRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: spacing.sm,
+    padding: spacing.sm,
+    borderRadius: radius.md,
+    backgroundColor: "rgba(9,10,18,0.72)",
+    borderWidth: 1,
+    borderColor: "rgba(139,92,246,0.16)"
+  },
+  contactAvatar: {
+    width: 46,
+    height: 46,
+    borderRadius: 23,
+    borderWidth: 1,
+    alignItems: "center",
+    justifyContent: "center",
+    backgroundColor: "rgba(56,189,248,0.14)"
+  },
+  contactAvatarText: {
+    color: colors.boneWhite,
+    fontSize: 14,
+    fontWeight: "900"
+  },
+  contactCopy: {
+    flex: 1
+  },
+  contactName: {
+    color: colors.boneWhite,
+    fontSize: 14,
+    fontWeight: "800"
+  },
+  contactMeta: {
+    color: colors.mistBlue,
+    fontSize: 12,
+    marginTop: 2
+  },
+  contactTrustNote: {
+    color: colors.softGray,
+    fontSize: 12,
+    lineHeight: 17,
+    marginTop: 4
+  },
+  contactStatePill: {
+    minWidth: 88,
+    paddingHorizontal: 10,
+    paddingVertical: 8,
+    borderRadius: 999,
+    alignItems: "center"
+  },
+  contactStateActive: {
+    backgroundColor: "rgba(139,92,246,0.22)"
+  },
+  contactStateInvite: {
+    backgroundColor: "rgba(56,189,248,0.2)"
+  },
+  contactStateRelay: {
+    backgroundColor: "rgba(245,158,11,0.18)"
+  },
+  contactStateText: {
+    color: colors.boneWhite,
+    fontSize: 11,
+    fontWeight: "900"
+  },
+  contactStateMeta: {
+    color: colors.softGray,
+    fontSize: 10,
+    marginTop: 2
+  },
+  contactEmptyState: {
+    borderRadius: radius.md,
+    borderWidth: 1,
+    borderColor: "rgba(139,92,246,0.18)",
+    backgroundColor: "rgba(9,10,18,0.72)",
+    padding: spacing.md
+  },
+  contactEmptyTitle: {
+    color: colors.boneWhite,
+    fontSize: 14,
+    fontWeight: "800",
+    marginBottom: 4
+  },
+  contactEmptyBody: {
+    color: colors.softGray,
+    fontSize: 12,
+    lineHeight: 18
   },
   destructiveButton: {
     borderColor: colors.darkRed,

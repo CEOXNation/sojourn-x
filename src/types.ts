@@ -71,13 +71,45 @@ export type BetaProfile = {
   handle: string;
   avatar: string;
   status: string;
+  phoneNumber: string;
   pronouns: string;
   bio: string;
   location: string;
   website: string;
   homeRealm: RealmKey;
   privateMode: boolean;
+  contactsSyncEnabled: boolean;
   onboardingComplete: boolean;
+};
+
+export type ContactSyncPermission = "unknown" | "granted" | "denied" | "unavailable";
+
+export type ContactMatchState = "on-sojourn" | "invite-ready" | "private-relay";
+
+export type SyncedContact = {
+  id: string;
+  displayName: string;
+  initials: string;
+  phoneNumber: string;
+  trustNote: string;
+  matchState: ContactMatchState;
+  realmAffinity: RealmKey;
+  lastSeen: string;
+  source: "device" | "preview";
+};
+
+export type ContactSyncState = {
+  permission: ContactSyncPermission;
+  enabled: boolean;
+  lastSyncedAt: string | null;
+  deviceContactCount: number;
+  importedCount: number;
+  source: "device" | "preview" | "none";
+};
+
+export type ContactSyncResult = {
+  contacts: SyncedContact[];
+  state: ContactSyncState;
 };
 
 export type PulsePost = {
