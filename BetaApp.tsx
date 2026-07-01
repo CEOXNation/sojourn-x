@@ -1526,7 +1526,7 @@ function GrowthRealmView({
               style={[
                 styles.grwProgressFill,
                 {
-                  width: `${Math.round(goal.progress * 100)}%` as any,
+                  width: `${Math.round(goal.progress * 100)}%`,
                   backgroundColor: ui.primaryColor
                 }
               ]}
