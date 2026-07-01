@@ -250,21 +250,22 @@ export default function BetaApp() {
     const upsertMeta = (
       selector: string,
       attribute: "name" | "property",
-      key: string,
+      attributeValue: string,
       content: string
     ) => {
       let meta = document.querySelector<HTMLMetaElement>(selector);
 
       if (!meta) {
         meta = document.createElement("meta");
-        meta.setAttribute(attribute, key);
+        meta.setAttribute(attribute, attributeValue);
         document.head.appendChild(meta);
       }
 
       meta.setAttribute("content", content);
     };
 
-    const upsertLink = (selector: string, rel: string, href: string, extraAttributes?: Record<string, string>) => {
+    const ensureLink = (selector: string, rel: string, href: string, extraAttributes?: Record<string, string>) => {
+      const allowedExtraAttributes = new Set(["sizes", "type", "crossorigin", "media"]);
       let link = document.querySelector<HTMLLinkElement>(selector);
 
       if (!link) {
@@ -277,7 +278,11 @@ export default function BetaApp() {
 
       if (extraAttributes) {
         Object.entries(extraAttributes).forEach(([name, value]) => {
-          link?.setAttribute(name, value);
+          if (!allowedExtraAttributes.has(name)) {
+            return;
+          }
+
+          link.setAttribute(name, value);
         });
       }
     };
@@ -293,13 +298,17 @@ export default function BetaApp() {
     upsertMeta('meta[name="apple-mobile-web-app-title"]', "name", "apple-mobile-web-app-title", "SojournX");
     upsertMeta('meta[property="og:site_name"]', "property", "og:site_name", "SojournX");
 
-    upsertLink('link[rel="manifest"]', "manifest", webManifestPath);
-    upsertLink('link[rel="apple-touch-icon"]', "apple-touch-icon", "/sojournx-logo.png", {
+    ensureLink('link[rel="manifest"]', "manifest", webManifestPath);
+    ensureLink('link[rel="apple-touch-icon"]', "apple-touch-icon", "/sojournx-logo.png", {
       sizes: "1024x1024"
     });
 
     if ("serviceWorker" in navigator) {
-      void navigator.serviceWorker.register(webServiceWorkerPath).catch(() => undefined);
+      void navigator.serviceWorker.register(webServiceWorkerPath).catch((error: unknown) => {
+        if (__DEV__) {
+          console.warn("SojournX service worker registration failed.", error);
+        }
+      });
     }
   }, []);
 
