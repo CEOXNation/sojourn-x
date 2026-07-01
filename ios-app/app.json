@@ -1,0 +1,66 @@
+{
+  "expo": {
+    "name": "SojournX",
+    "slug": "sojournx",
+    "scheme": "sojournx",
+    "version": "0.1.0",
+    "runtimeVersion": {
+      "policy": "appVersion"
+    },
+    "orientation": "portrait",
+    "userInterfaceStyle": "dark",
+    "icon": "../src/assets/icon-square.png",
+    "assetBundlePatterns": [
+      "**/*"
+    ],
+    "plugins": [
+      [
+        "expo-splash-screen",
+        {
+          "image": "../src/assets/hero.png",
+          "resizeMode": "contain",
+          "backgroundColor": "#050505"
+        }
+      ],
+      [
+        "expo-contacts",
+        {
+          "contactsPermission": "Allow SojournX to sync trusted contacts into your private vault.",
+          "contactsUsageDescription": "SojournX uses your contacts to build a private trusted circle for the anonymity realm."
+        }
+      ],
+      "expo-av"
+    ],
+    "ios": {
+      "supportsTablet": true,
+      "bundleIdentifier": "com.sojournx.app",
+      "buildNumber": "1",
+      "infoPlist": {
+        "NSContactsUsageDescription": "SojournX uses your contacts to build a private trusted circle for the anonymity realm.",
+        "NSMicrophoneUsageDescription": "SojournX requests microphone access for future voice features.",
+        "UIBackgroundModes": [],
+        "ITSAppUsesNonExemptEncryption": false
+      },
+      "config": {
+        "usesNonExemptEncryption": false
+      },
+      "privacyManifests": {
+        "NSPrivacyAccessedAPITypes": [
+          {
+            "NSPrivacyAccessedAPIType": "NSPrivacyAccessedAPICategoryUserDefaults",
+            "NSPrivacyAccessedAPITypeReasons": ["CA92.1"]
+          }
+        ]
+      }
+    },
+    "extra": {
+      "eas": {
+        "projectId": "sojournx-beta"
+      }
+    },
+    "updates": {
+      "url": "https://u.expo.dev/sojournx-beta",
+      "fallbackToCacheTimeout": 0
+    }
+  }
+}

@@ -1,0 +1,35 @@
+{
+  "name": "sojournx-ios",
+  "version": "0.1.0",
+  "private": true,
+  "main": "index.js",
+  "scripts": {
+    "start": "expo start --ios",
+    "start:simulator": "expo start --ios --simulator",
+    "start:clean": "expo start -c",
+    "typecheck": "tsc --noEmit",
+    "prebuild": "expo prebuild --platform ios --clean",
+    "eas:build:dev": "eas build --profile development --platform ios",
+    "eas:build:beta": "eas build --profile preview --platform ios",
+    "eas:build:adhoc": "eas build --profile adhoc --platform ios",
+    "eas:build:store": "eas build --profile production --platform ios",
+    "eas:submit": "eas submit --profile production --platform ios",
+    "eas:update": "eas update --channel beta --platform ios"
+  },
+  "dependencies": {
+    "@react-native-async-storage/async-storage": "2.2.0",
+    "expo": "~56.0.12",
+    "expo-av": "~16.0.7",
+    "expo-contacts": "~56.0.9",
+    "expo-haptics": "~14.1.4",
+    "expo-splash-screen": "~56.0.10",
+    "expo-status-bar": "~56.0.4",
+    "react": "19.2.3",
+    "react-native": "0.85.3",
+    "react-native-safe-area-context": "~5.7.0"
+  },
+  "devDependencies": {
+    "@types/react": "19.2.17",
+    "typescript": "6.0.3"
+  }
+}
