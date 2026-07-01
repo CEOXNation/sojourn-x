@@ -39,11 +39,19 @@ import {
   clearContactSyncCache,
   clearKeys,
   createId,
+  loadBirthData,
   loadContactSyncState,
   loadJson,
+  loadPersonalization,
+  loadReminders,
+  loadSpiritualQuestionnaire,
   loadSyncedContacts,
+  saveBirthData,
   saveContactSyncState,
   saveJson,
+  savePersonalization,
+  saveReminders,
+  saveSpiritualQuestionnaire,
   saveSyncedContacts
 } from "./src/storage";
 import { createEmptyContactSyncState, syncTrustedContacts } from "./src/features/contacts";
@@ -53,12 +61,17 @@ import { SpeedInsights } from "@vercel/speed-insights/react";
 import type {
   BetaProfile,
   BetaTab,
+  BirthData,
   ContactSyncState,
   JournalEntry,
   PulsePost,
   Realm,
   RealmEnvironment,
   RealmKey,
+  RealmPersonalization,
+  RealmReminders,
+  ReminderConfig,
+  SpiritualQuestionnaire,
   SyncedContact,
   UiActionStyle,
   UiAccent,
@@ -71,6 +84,24 @@ import type {
   UiTransitionStyle,
   UiStylePreset
 } from "./src/types";
+import {
+  capitalise,
+  elementEmoji,
+  getAscendant,
+  getChineseZodiac,
+  getCurrentMoonPhase,
+  getDailyAffirmations,
+  getDailyOracleCard,
+  getDailyPlanet,
+  getDailyReflectionPrompt,
+  getElement,
+  getLifePathNumber,
+  getModality,
+  getMoonSign,
+  getSignMeta,
+  getSunSign,
+  pathEmoji
+} from "./src/features/astrology";
 
 const STORAGE_KEYS = {
   profile: "sojournx.beta.profile",
@@ -2123,19 +2154,6 @@ function RealmsScreen({
         <GrowthRealmView profile={profile} onMakeHome={onMakeHome} />
       ) : selectedRealm.key === "messaging" ? (
         <MessagingRealmView profile={profile} onMakeHome={onMakeHome} />
-      ) : selectedRealm.key === "spiritual" ? (
-        <SpiritualRealmView
-          profile={profile}
-          birthData={birthData}
-          setBirthData={setBirthData}
-          spiritualQ={spiritualQ}
-          setSpiritualQ={setSpiritualQ}
-          personalization={personalization.spiritual}
-          setPersonalization={(value) => setPersonalization((prev) => ({ ...prev, spiritual: value }))}
-          reminder={reminders.spiritual}
-          setReminder={(patch) => setReminder("spiritual", patch)}
-          onMakeHome={onMakeHome}
-        />
       ) : selectedRealm.key === "social" ? (
         <SocialRealmScreen profile={profile} onMakeHome={onMakeHome} />
       ) : (
@@ -2164,12 +2182,6 @@ function RealmsScreen({
                 subtitle="Keep your trusted circle close without exposing a public graph."
               />
             )}
-
-            <RealmPersonalizationCard
-              realmKey={selectedRealm.key}
-              personalization={personalization}
-              setPersonalization={setPersonalization}
-            />
 
             <SectionTitle
               title="Environment Modules"
@@ -2212,6 +2224,8 @@ function RealmsScreen({
               </View>
             </ContentCard>
 
+            {selectedRealm.key === "spiritual" && <SpiritualOracleSuite />}
+
             <View style={styles.featureList}>
               {selectedRealm.features.map((feature) => (
                 <View key={feature} style={styles.featureRow}>
@@ -2220,11 +2234,6 @@ function RealmsScreen({
                 </View>
               ))}
             </View>
-
-            <RealmReminderCard
-              reminder={reminders[selectedRealm.key as keyof RealmReminders]}
-              onChange={(patch) => setReminder(selectedRealm.key, patch)}
-            />
 
             <TouchableOpacity
               style={[styles.secondaryButton, profile.homeRealm === selectedRealm.key && styles.secondaryButtonDisabled]}
@@ -2240,8 +2249,8 @@ function RealmsScreen({
             <Text style={styles.cardKicker}>CATEGORY</Text>
             <Text style={styles.cardTitle}>Multi-Realm Identity Platform</Text>
             <Text style={styles.bodyText}>
-              SojournX Beta keeps a home realm, a preview realm, and a live profile so the category
-              is measurable — not just promised.
+              SojournX Beta now keeps a home realm, a preview realm, and a live profile so the category
+              is measurable instead of just promised.
             </Text>
           </ContentCard>
         </>
