@@ -113,6 +113,8 @@ const defaultUiPreferences: UiPreferences = {
 };
 
 const publicSiteUrl = "https://sojournx.xyz";
+const webManifestPath = "/manifest.webmanifest";
+const webServiceWorkerPath = "/service-worker.js";
 
 const logoImage = require("./src/assets/sojournx-logo.png");
 
@@ -239,6 +241,67 @@ export default function BetaApp() {
   const [pulseRealmKey, setPulseRealmKey] = useState<RealmKey>(defaultProfile.homeRealm);
   const [journalBody, setJournalBody] = useState("");
   const [journalMood, setJournalMood] = useState(betaMoods[1]);
+
+  useEffect(() => {
+    if (Platform.OS !== "web" || typeof document === "undefined") {
+      return;
+    }
+
+    const upsertMeta = (
+      selector: string,
+      attribute: "name" | "property",
+      key: string,
+      content: string
+    ) => {
+      let meta = document.querySelector<HTMLMetaElement>(selector);
+
+      if (!meta) {
+        meta = document.createElement("meta");
+        meta.setAttribute(attribute, key);
+        document.head.appendChild(meta);
+      }
+
+      meta.setAttribute("content", content);
+    };
+
+    const upsertLink = (selector: string, rel: string, href: string, extraAttributes?: Record<string, string>) => {
+      let link = document.querySelector<HTMLLinkElement>(selector);
+
+      if (!link) {
+        link = document.createElement("link");
+        link.setAttribute("rel", rel);
+        document.head.appendChild(link);
+      }
+
+      link.setAttribute("href", href);
+
+      if (extraAttributes) {
+        Object.entries(extraAttributes).forEach(([name, value]) => {
+          link?.setAttribute(name, value);
+        });
+      }
+    };
+
+    upsertMeta('meta[name="theme-color"]', "name", "theme-color", "#050505");
+    upsertMeta('meta[name="apple-mobile-web-app-capable"]', "name", "apple-mobile-web-app-capable", "yes");
+    upsertMeta(
+      'meta[name="apple-mobile-web-app-status-bar-style"]',
+      "name",
+      "apple-mobile-web-app-status-bar-style",
+      "black-translucent"
+    );
+    upsertMeta('meta[name="apple-mobile-web-app-title"]', "name", "apple-mobile-web-app-title", "SojournX");
+    upsertMeta('meta[property="og:site_name"]', "property", "og:site_name", "SojournX");
+
+    upsertLink('link[rel="manifest"]', "manifest", webManifestPath);
+    upsertLink('link[rel="apple-touch-icon"]', "apple-touch-icon", "/sojournx-logo.png", {
+      sizes: "1024x1024"
+    });
+
+    if ("serviceWorker" in navigator) {
+      void navigator.serviceWorker.register(webServiceWorkerPath).catch(() => undefined);
+    }
+  }, []);
 
   useEffect(() => {
     let cancelled = false;

@@ -40,7 +40,14 @@
     },
     "web": {
       "bundler": "metro",
-      "backgroundColor": "#050505"
+      "backgroundColor": "#050505",
+      "themeColor": "#050505",
+      "name": "SojournX",
+      "shortName": "SojournX",
+      "description": "SojournX is a privacy-first multi-realm identity platform.",
+      "lang": "en",
+      "display": "standalone",
+      "favicon": "./public/sojournx-logo.png"
     },
     "extra": {
       "eas": {

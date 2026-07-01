@@ -1,0 +1,19 @@
+{
+  "name": "SojournX",
+  "short_name": "SojournX",
+  "description": "SojournX is a privacy-first multi-realm identity platform.",
+  "start_url": "/",
+  "scope": "/",
+  "display": "standalone",
+  "orientation": "portrait",
+  "background_color": "#050505",
+  "theme_color": "#050505",
+  "icons": [
+    {
+      "src": "/sojournx-logo.png",
+      "sizes": "1024x1024",
+      "type": "image/png",
+      "purpose": "any maskable"
+    }
+  ]
+}
