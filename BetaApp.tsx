@@ -1280,35 +1280,40 @@ function SpiritualOracleSuite({ profile }: { profile: BetaProfile }) {
 
       <ContentCard>
         <Text style={styles.cardKicker}>BIRTH CHART MATRIX</Text>
-        {profile.birthDate ? (
-          <>
-            <Text style={styles.spiritualHeadline}>
-              Sun {calcSunSign(profile.birthDate)} · Moon {calcMoonSign(profile.birthDate)} · Rising{" "}
-              {profile.birthTime ? calcRisingSign(profile.birthTime) : "Unknown"}
-            </Text>
-            <Text style={styles.spiritualMeaning}>North Node: {calcNorthNode(profile.birthDate)}</Text>
-            <View style={styles.featureList}>
-              {[
-                { body: `Sun · ${calcSunSign(profile.birthDate)}`, meaning: signInterpretations[calcSunSign(profile.birthDate)]?.sun ?? "" },
-                { body: `Moon · ${calcMoonSign(profile.birthDate)}`, meaning: signInterpretations[calcMoonSign(profile.birthDate)]?.moon ?? "" },
-                ...(profile.birthTime
-                  ? [{ body: `Rising · ${calcRisingSign(profile.birthTime)}`, meaning: signInterpretations[calcRisingSign(profile.birthTime)]?.rising ?? "" }]
-                  : []),
-                ...(profile.birthPlace
-                  ? [{ body: `Birth Place · ${profile.birthPlace}`, meaning: "Location noted for transit and solar return work." }]
-                  : [])
-              ].map((placement) => (
-                <View key={placement.body} style={styles.spiritualPlacement}>
-                  <Text style={styles.spiritualPlacementTitle}>{placement.body}</Text>
-                  <Text style={styles.bodyText}>{placement.meaning}</Text>
-                </View>
-              ))}
-            </View>
-            <Text style={styles.helperNote}>
-              Moon and rising calculations are approximate. For exact placements, verify with a full ephemeris.
-            </Text>
-          </>
-        ) : (
+        {profile.birthDate ? (() => {
+          const sunSign = calcSunSign(profile.birthDate);
+          const moonSign = calcMoonSign(profile.birthDate);
+          const risingSign = profile.birthTime ? calcRisingSign(profile.birthTime) : "Unknown";
+          const northNode = calcNorthNode(profile.birthDate);
+          return (
+            <>
+              <Text style={styles.spiritualHeadline}>
+                Sun {sunSign} · Moon {moonSign} · Rising {risingSign}
+              </Text>
+              <Text style={styles.spiritualMeaning}>North Node: {northNode}</Text>
+              <View style={styles.featureList}>
+                {[
+                  { body: `Sun · ${sunSign}`, meaning: signInterpretations[sunSign]?.sun ?? "" },
+                  { body: `Moon · ${moonSign}`, meaning: signInterpretations[moonSign]?.moon ?? "" },
+                  ...(profile.birthTime
+                    ? [{ body: `Rising · ${risingSign}`, meaning: signInterpretations[risingSign]?.rising ?? "" }]
+                    : []),
+                  ...(profile.birthPlace
+                    ? [{ body: `Birth Place · ${profile.birthPlace}`, meaning: "Location noted for transit and solar return work." }]
+                    : [])
+                ].map((placement) => (
+                  <View key={placement.body} style={styles.spiritualPlacement}>
+                    <Text style={styles.spiritualPlacementTitle}>{placement.body}</Text>
+                    <Text style={styles.bodyText}>{placement.meaning}</Text>
+                  </View>
+                ))}
+              </View>
+              <Text style={styles.helperNote}>
+                Moon and rising calculations are approximate. For exact placements, verify with a full ephemeris.
+              </Text>
+            </>
+          );
+        })() : (
           <>
             <Text style={styles.cardTitle}>
               Sun {spiritualBirthChart.identity.sun} · Moon {spiritualBirthChart.identity.moon} · Rising{" "}
@@ -2461,6 +2466,9 @@ const signInterpretations: Record<string, { sun: string; moon: string; rising: s
 
 function calcSunSign(birthDate: string): string {
   if (!birthDate) return "Unknown";
+  // Parse at noon UTC to avoid date-boundary issues from timezone offsets.
+  // Births on cusp days (e.g. Mar 20, Apr 19) may differ from the true
+  // ingress moment — a full ephemeris is needed for exact cusp cases.
   const date = new Date(birthDate + "T12:00:00Z");
   if (isNaN(date.getTime())) return "Unknown";
   const m = date.getUTCMonth() + 1;
@@ -2483,7 +2491,10 @@ function calcMoonSign(birthDate: string): string {
   if (!birthDate) return "Unknown";
   const date = new Date(birthDate + "T12:00:00Z");
   if (isNaN(date.getTime())) return "Unknown";
-  // Reference: Moon ~0° Capricorn on Jan 6, 2000
+  // Simplified sidereal approximation: moon ~0° Capricorn on Jan 6, 2000.
+  // Uses a 27.3-day sidereal cycle (~2.275 days per sign). Does not account
+  // for the moon's elliptical orbit or actual ephemeris data — result is
+  // approximate and consistent with the disclaimer shown in the UI.
   const refMs = new Date("2000-01-06T00:00:00Z").getTime();
   const daysDiff = (date.getTime() - refMs) / 86400000;
   const moonCycle = 27.3;
@@ -2500,7 +2511,11 @@ function calcRisingSign(birthTime: string): string {
   const h = parseInt(hStr ?? "0", 10);
   const m = parseInt(mStr ?? "0", 10);
   if (isNaN(h) || isNaN(m)) return "Unknown";
-  // Simplified: ASC ~1 sign per 2 hours (ignores latitude)
+  // Very simplified rising-sign estimate: one sign per 2 hours from midnight,
+  // starting at Aries. Ignores birth location latitude/longitude and exact
+  // sidereal time, which are required for an accurate ascendant calculation.
+  // This is illustrative only and will vary by several signs from the true
+  // ascendant for many birth times/locations.
   const totalHours = h + m / 60;
   const signs = ["Aries", "Taurus", "Gemini", "Cancer", "Leo", "Virgo",
     "Libra", "Scorpio", "Sagittarius", "Capricorn", "Aquarius", "Pisces"];
@@ -2528,29 +2543,29 @@ const sampleConfessions = [
   {
     id: "conf1",
     text: "I've been pretending everything is fine for months. This is the first honest thing I've typed today.",
-    time: "2h ago"
+    time: new Date(Date.now() - 2 * 60 * 60 * 1000).toISOString()
   },
   {
     id: "conf2",
     text: "I almost gave up on the thing I care about most. Glad I didn't.",
-    time: "4h ago"
+    time: new Date(Date.now() - 4 * 60 * 60 * 1000).toISOString()
   },
   {
     id: "conf3",
     text: "I'm rebuilding from scratch and I'm terrified it won't work, but I'm doing it anyway.",
-    time: "Yesterday"
+    time: new Date(Date.now() - 24 * 60 * 60 * 1000).toISOString()
   }
 ];
 
 function AnonymousRealmInteractive({ profile }: { profile: BetaProfile }) {
   const ui = useUiRuntime();
-  const [confessions, setConfessions] = useState(sampleConfessions);
+  const [confessions, setConfessions] = useState<Array<{ id: string; text: string; time: string }>>(sampleConfessions);
   const [draft, setDraft] = useState("");
 
   const castConfession = () => {
     const text = draft.trim();
     if (!text) return;
-    setConfessions((current) => [{ id: createId(), text, time: "Just now" }, ...current]);
+    setConfessions((current: Array<{ id: string; text: string; time: string }>) => [{ id: createId("conf"), text, time: new Date().toISOString() }, ...current]);
     setDraft("");
     ui.playUiAction();
   };
@@ -2580,13 +2595,13 @@ function AnonymousRealmInteractive({ profile }: { profile: BetaProfile }) {
 
       <SectionTitle title="Recent Confessions" subtitle="Anonymous · Local-only · No identity attached." />
 
-      {confessions.slice(0, 5).map((item) => (
+      {confessions.slice(0, 5).map((item: { id: string; text: string; time: string }) => (
         <ContentCard key={item.id}>
           <View style={styles.confessionRow}>
             <Text style={[styles.confessionGhost, { color: ui.glowColor }]}>◼</Text>
             <View style={{ flex: 1 }}>
               <Text style={styles.bodyText}>{item.text}</Text>
-              <Text style={styles.cardMeta}>{item.time}</Text>
+              <Text style={styles.cardMeta}>{formatRelativeTime(item.time)}</Text>
             </View>
           </View>
         </ContentCard>
@@ -2611,7 +2626,7 @@ const sampleSocialPosts = [
     avatar: "V",
     content: "Choosing peace over being right today. It cost me something. Worth it.",
     reactions: 14,
-    time: "1h ago"
+    time: new Date(Date.now() - 60 * 60 * 1000).toISOString()
   },
   {
     id: "sp2",
@@ -2619,7 +2634,7 @@ const sampleSocialPosts = [
     avatar: "I",
     content: "Finished my first growth arc. Something quietly shifted. I can't explain it yet.",
     reactions: 27,
-    time: "3h ago"
+    time: new Date(Date.now() - 3 * 60 * 60 * 1000).toISOString()
   },
   {
     id: "sp3",
@@ -2627,7 +2642,7 @@ const sampleSocialPosts = [
     avatar: "P",
     content: "Reading offline. It feels different when nothing is competing for attention.",
     reactions: 9,
-    time: "5h ago"
+    time: new Date(Date.now() - 5 * 60 * 60 * 1000).toISOString()
   }
 ];
 
@@ -2635,14 +2650,14 @@ function SocialRealmInteractive({ profile }: { profile: BetaProfile }) {
   const ui = useUiRuntime();
   const [showComposer, setShowComposer] = useState(false);
   const [postDraft, setPostDraft] = useState("");
-  const [localPosts, setLocalPosts] = useState(sampleSocialPosts);
+  const [localPosts, setLocalPosts] = useState<Array<{ id: string; handle: string; avatar: string; content: string; reactions: number; time: string }>>(sampleSocialPosts);
 
   const publishPost = () => {
     const text = postDraft.trim();
     if (!text) return;
     const handle = profile.handle || "anonymous";
     const avatar = profile.avatar || "?";
-    setLocalPosts((current) => [{ id: createId(), handle, avatar, content: text, reactions: 0, time: "Just now" }, ...current]);
+    setLocalPosts((current: Array<{ id: string; handle: string; avatar: string; content: string; reactions: number; time: string }>) => [{ id: createId("post"), handle, avatar, content: text, reactions: 0, time: new Date().toISOString() }, ...current]);
     setPostDraft("");
     setShowComposer(false);
     ui.playUiAction();
@@ -2708,7 +2723,7 @@ function SocialRealmInteractive({ profile }: { profile: BetaProfile }) {
 
       <SectionTitle title="Community Feed" subtitle="Recent posts across your social realm." />
 
-      {localPosts.map((post) => (
+      {localPosts.map((post: { id: string; handle: string; avatar: string; content: string; reactions: number; time: string }) => (
         <ContentCard key={post.id}>
           <View style={styles.socialPostRow}>
             <View style={[styles.socialPostAvatar, { backgroundColor: ui.primaryColor }]}>
@@ -2716,7 +2731,7 @@ function SocialRealmInteractive({ profile }: { profile: BetaProfile }) {
             </View>
             <View style={{ flex: 1 }}>
               <Text style={styles.cardTitle}>@{post.handle}</Text>
-              <Text style={styles.cardMeta}>{post.time}</Text>
+              <Text style={styles.cardMeta}>{formatRelativeTime(post.time)}</Text>
             </View>
           </View>
           <Text style={[styles.bodyText, { marginTop: 8 }]}>{post.content}</Text>
@@ -2739,7 +2754,7 @@ function MessagingRealmInteractive() {
   const sendMessage = (threadName: string) => {
     const text = messageDraft.trim();
     if (!text) return;
-    setThreadMessages((current) => ({
+    setThreadMessages((current: Record<string, string[]>) => ({
       ...current,
       [threadName]: [...(current[threadName] ?? []), text]
     }));
