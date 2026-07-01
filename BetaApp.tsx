@@ -28,6 +28,10 @@ import {
   betaTabs
 } from "./src/data/beta";
 import {
+  anonymousPosts,
+  growthSignals,
+  marketItems,
+  privateMessages,
   realmEnvironments,
   realms,
   spiritualAstrologicalWeather,
@@ -93,7 +97,10 @@ const defaultProfile: BetaProfile = {
   homeRealm: "anonymous",
   privateMode: true,
   contactsSyncEnabled: false,
-  onboardingComplete: false
+  onboardingComplete: false,
+  birthDate: "",
+  birthTime: "",
+  birthPlace: ""
 };
 
 const defaultPulseMood = betaMoods[0];
@@ -566,6 +573,7 @@ export default function BetaApp() {
                 onSyncContacts={() => void handleContactSync()}
                 setSelectedRealmKey={setSelectedRealmKey}
                 onMakeHome={(realmKey) => setProfile((current) => ({ ...current, homeRealm: realmKey }))}
+                journalEntries={journalEntries}
               />
             )}
 
@@ -1043,7 +1051,8 @@ function RealmsScreen({
   syncingContacts,
   onSyncContacts,
   setSelectedRealmKey,
-  onMakeHome
+  onMakeHome,
+  journalEntries
 }: {
   profile: BetaProfile;
   selectedRealm: Realm;
@@ -1054,6 +1063,7 @@ function RealmsScreen({
   onSyncContacts: () => void;
   setSelectedRealmKey: React.Dispatch<React.SetStateAction<RealmKey>>;
   onMakeHome: (realmKey: RealmKey) => void;
+  journalEntries: JournalEntry[];
 }) {
   const ui = useUiRuntime();
 
@@ -1150,7 +1160,12 @@ function RealmsScreen({
           </View>
         </ContentCard>
 
-        {selectedRealm.key === "spiritual" && <SpiritualOracleSuite />}
+        {selectedRealm.key === "anonymous" && <AnonymousRealmInteractive profile={profile} />}
+        {selectedRealm.key === "social" && <SocialRealmInteractive profile={profile} />}
+        {selectedRealm.key === "messaging" && <MessagingRealmInteractive />}
+        {selectedRealm.key === "marketplace" && <MarketplaceRealmInteractive />}
+        {selectedRealm.key === "spiritual" && <SpiritualOracleSuite profile={profile} />}
+        {selectedRealm.key === "growth" && <GrowthRealmInteractive profile={profile} journalEntries={journalEntries} />}
 
         <View style={styles.featureList}>
           {selectedRealm.features.map((feature) => (
@@ -1183,7 +1198,7 @@ function RealmsScreen({
   );
 }
 
-function SpiritualOracleSuite() {
+function SpiritualOracleSuite({ profile }: { profile: BetaProfile }) {
   const ui = useUiRuntime();
   const fallbackTarot = {
     name: "Deck Offline",
@@ -1265,20 +1280,54 @@ function SpiritualOracleSuite() {
 
       <ContentCard>
         <Text style={styles.cardKicker}>BIRTH CHART MATRIX</Text>
-        <Text style={styles.spiritualHeadline}>
-          Sun {spiritualBirthChart.identity.sun} · Moon {spiritualBirthChart.identity.moon} · Rising{" "}
-          {spiritualBirthChart.identity.rising}
-        </Text>
-        <Text style={styles.spiritualMeaning}>North Node: {spiritualBirthChart.identity.northNode}</Text>
-
-        <View style={styles.featureList}>
-          {spiritualBirthChart.placements.map((placement) => (
-            <View key={placement.body} style={styles.spiritualPlacement}>
-              <Text style={styles.spiritualPlacementTitle}>{placement.body}</Text>
-              <Text style={styles.bodyText}>{placement.meaning}</Text>
+        {profile.birthDate ? (
+          <>
+            <Text style={styles.spiritualHeadline}>
+              Sun {calcSunSign(profile.birthDate)} · Moon {calcMoonSign(profile.birthDate)} · Rising{" "}
+              {profile.birthTime ? calcRisingSign(profile.birthTime) : "Unknown"}
+            </Text>
+            <Text style={styles.spiritualMeaning}>North Node: {calcNorthNode(profile.birthDate)}</Text>
+            <View style={styles.featureList}>
+              {[
+                { body: `Sun · ${calcSunSign(profile.birthDate)}`, meaning: signInterpretations[calcSunSign(profile.birthDate)]?.sun ?? "" },
+                { body: `Moon · ${calcMoonSign(profile.birthDate)}`, meaning: signInterpretations[calcMoonSign(profile.birthDate)]?.moon ?? "" },
+                ...(profile.birthTime
+                  ? [{ body: `Rising · ${calcRisingSign(profile.birthTime)}`, meaning: signInterpretations[calcRisingSign(profile.birthTime)]?.rising ?? "" }]
+                  : []),
+                ...(profile.birthPlace
+                  ? [{ body: `Birth Place · ${profile.birthPlace}`, meaning: "Location noted for transit and solar return work." }]
+                  : [])
+              ].map((placement) => (
+                <View key={placement.body} style={styles.spiritualPlacement}>
+                  <Text style={styles.spiritualPlacementTitle}>{placement.body}</Text>
+                  <Text style={styles.bodyText}>{placement.meaning}</Text>
+                </View>
+              ))}
             </View>
-          ))}
-        </View>
+            <Text style={styles.helperNote}>
+              Moon and rising calculations are approximate. For exact placements, verify with a full ephemeris.
+            </Text>
+          </>
+        ) : (
+          <>
+            <Text style={styles.cardTitle}>
+              Sun {spiritualBirthChart.identity.sun} · Moon {spiritualBirthChart.identity.moon} · Rising{" "}
+              {spiritualBirthChart.identity.rising}
+            </Text>
+            <Text style={styles.spiritualMeaning}>North Node: {spiritualBirthChart.identity.northNode}</Text>
+            <View style={styles.featureList}>
+              {spiritualBirthChart.placements.map((placement) => (
+                <View key={placement.body} style={styles.spiritualPlacement}>
+                  <Text style={styles.spiritualPlacementTitle}>{placement.body}</Text>
+                  <Text style={styles.bodyText}>{placement.meaning}</Text>
+                </View>
+              ))}
+            </View>
+            <Text style={[styles.helperNote, { color: "#A5B4FC" }]}>
+              ◆ Add your birth date, time, and place in Profile to unlock your personal chart.
+            </Text>
+          </>
+        )}
       </ContentCard>
 
       <ContentCard>
@@ -1485,6 +1534,56 @@ function ProfileScreen({
           placeholder="Designing a more intentional social future."
           multiline
         />
+      </ContentCard>
+
+      <ContentCard>
+        <Text style={styles.cardKicker}>ASTROLOGICAL DATA</Text>
+        <Text style={styles.bodyText}>
+          Used to generate your personal birth chart and accurate readings in the Spiritual Realm.
+        </Text>
+
+        <FieldLabel label="Birth Date" helper="YYYY-MM-DD · Used for sun sign, moon sign, and north node." />
+        <InputField
+          value={profile.birthDate}
+          onChangeText={(birthDate) => setProfile((current) => ({ ...current, birthDate }))}
+          placeholder="1993-11-04"
+        />
+
+        <FieldLabel label="Birth Time" helper="HH:MM (24h) · Used for rising sign calculation." />
+        <InputField
+          value={profile.birthTime}
+          onChangeText={(birthTime) => setProfile((current) => ({ ...current, birthTime }))}
+          placeholder="14:30"
+        />
+
+        <FieldLabel label="Birth Place" helper="City, Country · Referenced in transit and solar return readings." />
+        <InputField
+          value={profile.birthPlace}
+          onChangeText={(birthPlace) => setProfile((current) => ({ ...current, birthPlace }))}
+          placeholder="New Orleans, US"
+        />
+
+        {profile.birthDate ? (
+          <View style={styles.featureList}>
+            <Text style={[styles.cardKicker, { color: "#A5B4FC" }]}>LIVE CHART PREVIEW</Text>
+            <Text style={styles.bodyText}>
+              ☀ Sun: {calcSunSign(profile.birthDate)}
+            </Text>
+            <Text style={styles.bodyText}>
+              ☽ Moon: {calcMoonSign(profile.birthDate)} (approximate)
+            </Text>
+            {profile.birthTime ? (
+              <Text style={styles.bodyText}>
+                ↑ Rising: {calcRisingSign(profile.birthTime)} (simplified)
+              </Text>
+            ) : null}
+            <Text style={styles.bodyText}>
+              ☊ North Node: {calcNorthNode(profile.birthDate)}
+            </Text>
+          </View>
+        ) : (
+          <Text style={styles.helperNote}>Enter your birth date above to preview your chart.</Text>
+        )}
       </ContentCard>
 
       <ContactSyncCard
@@ -2295,6 +2394,648 @@ function formatRelativeTime(value: string): string {
   return date.toLocaleDateString(undefined, { month: "short", day: "numeric" });
 }
 
+// ─── Astrological Utilities ──────────────────────────────────────────────────
+
+const signInterpretations: Record<string, { sun: string; moon: string; rising: string }> = {
+  Aries: {
+    sun: "Pioneering spirit, fierce initiation, and courageous self-expression.",
+    moon: "Emotionally direct, instinct-driven, and passionate in response.",
+    rising: "Projects boldness, confidence, and an energized first impression."
+  },
+  Taurus: {
+    sun: "Embodied security, sensory wisdom, and deliberate creative power.",
+    moon: "Emotionally grounded, comfort-seeking, and loyal in feeling.",
+    rising: "Projects calm strength, aesthetic presence, and reliable warmth."
+  },
+  Gemini: {
+    sun: "Dual intelligence, communicative brilliance, and curious adaptability.",
+    moon: "Emotionally versatile, intellectually reactive, and socially aware.",
+    rising: "Projects wit, curiosity, and youthful conversational energy."
+  },
+  Cancer: {
+    sun: "Emotional depth, nurturing instinct, and sacred protection.",
+    moon: "Deeply intuitive, home-oriented, and emotionally receptive.",
+    rising: "Projects sensitivity, protective warmth, and quiet knowing."
+  },
+  Leo: {
+    sun: "Radiant self-expression, heart-led leadership, and generous presence.",
+    moon: "Emotionally expressive, needs appreciation, and warmly dramatic.",
+    rising: "Projects charisma, confidence, and a naturally commanding aura."
+  },
+  Virgo: {
+    sun: "Analytical clarity, devoted service, and healing precision.",
+    moon: "Emotionally careful, seeks order in feeling, and deeply practical.",
+    rising: "Projects attentiveness, competence, and grounded intelligence."
+  },
+  Libra: {
+    sun: "Relational artistry, harmonizing grace, and aesthetic justice.",
+    moon: "Emotionally balanced, peace-seeking, and relationship-focused.",
+    rising: "Projects charm, fairness, and elegant social ease."
+  },
+  Scorpio: {
+    sun: "Transformational depth, emotional alchemy, and fearless truth-seeking.",
+    moon: "Emotionally intense, deeply perceptive, and transformative.",
+    rising: "Projects magnetic mystery, quiet power, and penetrating presence."
+  },
+  Sagittarius: {
+    sun: "Visionary expansion, philosophical freedom, and inspired truth-telling.",
+    moon: "Emotionally optimistic, freedom-loving, and philosophically reactive.",
+    rising: "Projects enthusiasm, openness, and an adventurous first energy."
+  },
+  Capricorn: {
+    sun: "Disciplined mastery, structural integrity, and purposeful legacy.",
+    moon: "Emotionally controlled, achievement-oriented, and quietly resilient.",
+    rising: "Projects authority, reliability, and composed self-possession."
+  },
+  Aquarius: {
+    sun: "Collective vision, radical originality, and humanitarian awakening.",
+    moon: "Emotionally detached, idea-driven, and unconventionally expressive.",
+    rising: "Projects uniqueness, intellectual depth, and visionary detachment."
+  },
+  Pisces: {
+    sun: "Mystical sensitivity, intuitive compassion, and boundless empathy.",
+    moon: "Emotionally fluid, dream-sensitive, and deeply empathic.",
+    rising: "Projects gentle receptivity, otherworldly presence, and creative soul."
+  }
+};
+
+function calcSunSign(birthDate: string): string {
+  if (!birthDate) return "Unknown";
+  const date = new Date(birthDate + "T12:00:00Z");
+  if (isNaN(date.getTime())) return "Unknown";
+  const m = date.getUTCMonth() + 1;
+  const d = date.getUTCDate();
+  if ((m === 3 && d >= 21) || (m === 4 && d <= 19)) return "Aries";
+  if ((m === 4 && d >= 20) || (m === 5 && d <= 20)) return "Taurus";
+  if ((m === 5 && d >= 21) || (m === 6 && d <= 20)) return "Gemini";
+  if ((m === 6 && d >= 21) || (m === 7 && d <= 22)) return "Cancer";
+  if ((m === 7 && d >= 23) || (m === 8 && d <= 22)) return "Leo";
+  if ((m === 8 && d >= 23) || (m === 9 && d <= 22)) return "Virgo";
+  if ((m === 9 && d >= 23) || (m === 10 && d <= 22)) return "Libra";
+  if ((m === 10 && d >= 23) || (m === 11 && d <= 21)) return "Scorpio";
+  if ((m === 11 && d >= 22) || (m === 12 && d <= 21)) return "Sagittarius";
+  if ((m === 12 && d >= 22) || (m === 1 && d <= 19)) return "Capricorn";
+  if ((m === 1 && d >= 20) || (m === 2 && d <= 18)) return "Aquarius";
+  return "Pisces";
+}
+
+function calcMoonSign(birthDate: string): string {
+  if (!birthDate) return "Unknown";
+  const date = new Date(birthDate + "T12:00:00Z");
+  if (isNaN(date.getTime())) return "Unknown";
+  // Reference: Moon ~0° Capricorn on Jan 6, 2000
+  const refMs = new Date("2000-01-06T00:00:00Z").getTime();
+  const daysDiff = (date.getTime() - refMs) / 86400000;
+  const moonCycle = 27.3;
+  const signDays = moonCycle / 12;
+  const signs = ["Capricorn", "Aquarius", "Pisces", "Aries", "Taurus", "Gemini",
+    "Cancer", "Leo", "Virgo", "Libra", "Scorpio", "Sagittarius"];
+  const pos = ((daysDiff % moonCycle) + moonCycle) % moonCycle;
+  return signs[Math.floor(pos / signDays) % 12] ?? "Unknown";
+}
+
+function calcRisingSign(birthTime: string): string {
+  if (!birthTime || !birthTime.includes(":")) return "Unknown";
+  const [hStr, mStr] = birthTime.split(":");
+  const h = parseInt(hStr ?? "0", 10);
+  const m = parseInt(mStr ?? "0", 10);
+  if (isNaN(h) || isNaN(m)) return "Unknown";
+  // Simplified: ASC ~1 sign per 2 hours (ignores latitude)
+  const totalHours = h + m / 60;
+  const signs = ["Aries", "Taurus", "Gemini", "Cancer", "Leo", "Virgo",
+    "Libra", "Scorpio", "Sagittarius", "Capricorn", "Aquarius", "Pisces"];
+  return signs[Math.floor(totalHours / 2) % 12] ?? "Unknown";
+}
+
+function calcNorthNode(birthDate: string): string {
+  if (!birthDate) return "Unknown";
+  const date = new Date(birthDate + "T12:00:00Z");
+  if (isNaN(date.getTime())) return "Unknown";
+  // North Node entered Aries July 17 2023, retrograde ~18 months per sign
+  const refMs = new Date("2023-07-17T00:00:00Z").getTime();
+  const monthsDiff = (date.getTime() - refMs) / (86400000 * 30.44);
+  const signMonths = 18;
+  const signs = ["Aries", "Pisces", "Aquarius", "Capricorn", "Sagittarius", "Scorpio",
+    "Libra", "Virgo", "Leo", "Cancer", "Gemini", "Taurus"];
+  const retroMonths = -monthsDiff;
+  const pos = ((retroMonths % (signMonths * 12)) + signMonths * 12) % (signMonths * 12);
+  return signs[Math.floor(pos / signMonths) % 12] ?? "Unknown";
+}
+
+// ─── Realm Interactive Environments ─────────────────────────────────────────
+
+const sampleConfessions = [
+  {
+    id: "conf1",
+    text: "I've been pretending everything is fine for months. This is the first honest thing I've typed today.",
+    time: "2h ago"
+  },
+  {
+    id: "conf2",
+    text: "I almost gave up on the thing I care about most. Glad I didn't.",
+    time: "4h ago"
+  },
+  {
+    id: "conf3",
+    text: "I'm rebuilding from scratch and I'm terrified it won't work, but I'm doing it anyway.",
+    time: "Yesterday"
+  }
+];
+
+function AnonymousRealmInteractive({ profile }: { profile: BetaProfile }) {
+  const ui = useUiRuntime();
+  const [confessions, setConfessions] = useState(sampleConfessions);
+  const [draft, setDraft] = useState("");
+
+  const castConfession = () => {
+    const text = draft.trim();
+    if (!text) return;
+    setConfessions((current) => [{ id: createId(), text, time: "Just now" }, ...current]);
+    setDraft("");
+    ui.playUiAction();
+  };
+
+  return (
+    <View style={styles.realmInteractiveWrap}>
+      <SectionTitle
+        title="Confession Booth"
+        subtitle="Speak without a mask. Nothing leaves this device."
+      />
+
+      <ContentCard>
+        <Text style={styles.cardKicker}>CAST INTO THE VOID</Text>
+        <Text style={styles.bodyText}>
+          Type anything. It stays local. No account. No trace.
+        </Text>
+        <TextInput
+          style={[styles.input, styles.inputMultiline, { marginTop: 12 }]}
+          placeholder="Say the thing you've been holding back…"
+          placeholderTextColor={colors.mutedGray}
+          value={draft}
+          onChangeText={setDraft}
+          multiline
+        />
+        <PrimaryButton label="Cast into the Void" onPress={castConfession} />
+      </ContentCard>
+
+      <SectionTitle title="Recent Confessions" subtitle="Anonymous · Local-only · No identity attached." />
+
+      {confessions.slice(0, 5).map((item) => (
+        <ContentCard key={item.id}>
+          <View style={styles.confessionRow}>
+            <Text style={[styles.confessionGhost, { color: ui.glowColor }]}>◼</Text>
+            <View style={{ flex: 1 }}>
+              <Text style={styles.bodyText}>{item.text}</Text>
+              <Text style={styles.cardMeta}>{item.time}</Text>
+            </View>
+          </View>
+        </ContentCard>
+      ))}
+
+      {!profile.phoneNumber && (
+        <ContentCard>
+          <Text style={styles.cardKicker}>TRUSTED CIRCLE UPGRADE</Text>
+          <Text style={styles.bodyText}>
+            Add a relay number in Profile to unlock private contact discovery without a public graph.
+          </Text>
+        </ContentCard>
+      )}
+    </View>
+  );
+}
+
+const sampleSocialPosts = [
+  {
+    id: "sp1",
+    handle: "vault.walker",
+    avatar: "V",
+    content: "Choosing peace over being right today. It cost me something. Worth it.",
+    reactions: 14,
+    time: "1h ago"
+  },
+  {
+    id: "sp2",
+    handle: "inner.arc",
+    avatar: "I",
+    content: "Finished my first growth arc. Something quietly shifted. I can't explain it yet.",
+    reactions: 27,
+    time: "3h ago"
+  },
+  {
+    id: "sp3",
+    handle: "presence.mode",
+    avatar: "P",
+    content: "Reading offline. It feels different when nothing is competing for attention.",
+    reactions: 9,
+    time: "5h ago"
+  }
+];
+
+function SocialRealmInteractive({ profile }: { profile: BetaProfile }) {
+  const ui = useUiRuntime();
+  const [showComposer, setShowComposer] = useState(false);
+  const [postDraft, setPostDraft] = useState("");
+  const [localPosts, setLocalPosts] = useState(sampleSocialPosts);
+
+  const publishPost = () => {
+    const text = postDraft.trim();
+    if (!text) return;
+    const handle = profile.handle || "anonymous";
+    const avatar = profile.avatar || "?";
+    setLocalPosts((current) => [{ id: createId(), handle, avatar, content: text, reactions: 0, time: "Just now" }, ...current]);
+    setPostDraft("");
+    setShowComposer(false);
+    ui.playUiAction();
+  };
+
+  return (
+    <View style={styles.realmInteractiveWrap}>
+      <SectionTitle title="Social Feed" subtitle="Your public presence — shown only when you choose." />
+
+      <ContentCard>
+        <Text style={styles.cardKicker}>YOUR PROFILE CARD</Text>
+        <View style={styles.profilePreviewHeader}>
+          <View style={[styles.profileAvatar, { backgroundColor: ui.primaryColor, width: 52, height: 52, borderRadius: 26 }]}>
+            <Text style={styles.profileAvatarText}>{profile.avatar || "?"}</Text>
+          </View>
+          <View style={styles.profileIdentityBlock}>
+            <Text style={styles.cardTitle}>{profile.displayName || "Your Name"}</Text>
+            <Text style={styles.cardMeta}>@{profile.handle || "handle"}</Text>
+            <Text style={[styles.helperNote, { marginTop: 2 }]}>{profile.status || "Set a status"}</Text>
+          </View>
+        </View>
+        {profile.bio ? <Text style={styles.bodyText}>{profile.bio}</Text> : null}
+        {profile.location ? <Text style={styles.cardMeta}>{profile.location}</Text> : null}
+      </ContentCard>
+
+      <ContentCard>
+        <Text style={styles.cardKicker}>COMPOSE</Text>
+        {showComposer ? (
+          <>
+            <TextInput
+              style={[styles.input, styles.inputMultiline]}
+              placeholder="What's on your mind today?"
+              placeholderTextColor={colors.mutedGray}
+              value={postDraft}
+              onChangeText={setPostDraft}
+              multiline
+            />
+            <View style={{ flexDirection: "row", gap: 8 }}>
+              <TouchableOpacity
+                style={[styles.secondaryButton, { flex: 1, marginTop: 0, borderColor: colors.borderBlack }]}
+                onPress={() => setShowComposer(false)}
+              >
+                <Text style={styles.secondaryButtonText}>Discard</Text>
+              </TouchableOpacity>
+              <TouchableOpacity
+                style={[styles.primaryButton, { flex: 1, marginTop: 0, backgroundColor: ui.primaryColor }]}
+                onPress={publishPost}
+              >
+                <Text style={styles.primaryButtonText}>Publish</Text>
+              </TouchableOpacity>
+            </View>
+          </>
+        ) : (
+          <PrimaryButton
+            label="Write a Post"
+            onPress={() => {
+              setShowComposer(true);
+              ui.playUiAction();
+            }}
+          />
+        )}
+      </ContentCard>
+
+      <SectionTitle title="Community Feed" subtitle="Recent posts across your social realm." />
+
+      {localPosts.map((post) => (
+        <ContentCard key={post.id}>
+          <View style={styles.socialPostRow}>
+            <View style={[styles.socialPostAvatar, { backgroundColor: ui.primaryColor }]}>
+              <Text style={styles.socialPostAvatarText}>{post.avatar}</Text>
+            </View>
+            <View style={{ flex: 1 }}>
+              <Text style={styles.cardTitle}>@{post.handle}</Text>
+              <Text style={styles.cardMeta}>{post.time}</Text>
+            </View>
+          </View>
+          <Text style={[styles.bodyText, { marginTop: 8 }]}>{post.content}</Text>
+          <View style={styles.socialReactRow}>
+            <Text style={[styles.socialReactLabel, { color: ui.glowColor }]}>◆ {post.reactions}</Text>
+          </View>
+        </ContentCard>
+      ))}
+    </View>
+  );
+}
+
+function MessagingRealmInteractive() {
+  const ui = useUiRuntime();
+  const [ephemeral, setEphemeral] = useState(false);
+  const [activeThread, setActiveThread] = useState<string | null>(null);
+  const [messageDraft, setMessageDraft] = useState("");
+  const [threadMessages, setThreadMessages] = useState<Record<string, string[]>>({});
+
+  const sendMessage = (threadName: string) => {
+    const text = messageDraft.trim();
+    if (!text) return;
+    setThreadMessages((current) => ({
+      ...current,
+      [threadName]: [...(current[threadName] ?? []), text]
+    }));
+    setMessageDraft("");
+    ui.playUiAction();
+  };
+
+  return (
+    <View style={styles.realmInteractiveWrap}>
+      <SectionTitle title="Private Thread Chamber" subtitle="Encrypted-style conversations. Nothing shared publicly." />
+
+      <ContentCard>
+        <Text style={styles.cardKicker}>EPHEMERAL MODE</Text>
+        <ToggleRow
+          label={ephemeral ? "Ephemeral On · Messages expire" : "Ephemeral Off · Messages persist"}
+          description={
+            ephemeral
+              ? "Each message will dissolve at the end of the session."
+              : "Toggle on to enable timed, self-clearing message mode."
+          }
+          value={ephemeral}
+          onValueChange={setEphemeral}
+        />
+      </ContentCard>
+
+      <SectionTitle title="Threads" subtitle="Private corridors for trusted exchange." />
+
+      {privateMessages.map((thread) => {
+        const isActive = activeThread === thread.name;
+        const messages = threadMessages[thread.name] ?? [];
+        return (
+          <ContentCard key={thread.name}>
+            <TouchableOpacity
+              onPress={() => {
+                setActiveThread(isActive ? null : thread.name);
+                ui.playUiAction();
+              }}
+              activeOpacity={ui.actionOpacity}
+            >
+              <View style={styles.threadRow}>
+                <View style={[styles.threadUnreadDot, { backgroundColor: ui.glowColor }]}>
+                  <Text style={styles.threadUnreadText}>{thread.unread}</Text>
+                </View>
+                <View style={{ flex: 1 }}>
+                  <Text style={styles.cardTitle}>{thread.name}</Text>
+                  <Text style={styles.bodyText}>{thread.preview}</Text>
+                </View>
+                <Text style={[styles.helperNote, { color: ui.primaryColor }]}>{isActive ? "▲" : "▼"}</Text>
+              </View>
+            </TouchableOpacity>
+
+            {isActive && (
+              <View style={styles.threadExpanded}>
+                {messages.length > 0 ? (
+                  messages.map((msg: string, idx: number) => (
+                    <View key={idx} style={styles.threadMessageBubble}>
+                      <Text style={styles.threadMessageText}>{msg}</Text>
+                      {ephemeral && <Text style={[styles.helperNote, { color: colors.warning }]}>Ephemeral</Text>}
+                    </View>
+                  ))
+                ) : (
+                  <Text style={styles.helperNote}>No messages yet. Send the first one.</Text>
+                )}
+                <TextInput
+                  style={[styles.input, { marginTop: 12, marginBottom: 8 }]}
+                  placeholder="Type a message…"
+                  placeholderTextColor={colors.mutedGray}
+                  value={messageDraft}
+                  onChangeText={setMessageDraft}
+                />
+                <PrimaryButton label="Send" onPress={() => sendMessage(thread.name)} />
+              </View>
+            )}
+          </ContentCard>
+        );
+      })}
+    </View>
+  );
+}
+
+function MarketplaceRealmInteractive() {
+  const ui = useUiRuntime();
+  const [offerVault, setOfferVault] = useState<Set<string>>(new Set());
+  const [activeFilter, setActiveFilter] = useState<string>("All");
+
+  const categories = ["All", ...Array.from(new Set(marketItems.map((item) => item.category)))];
+
+  const filtered = activeFilter === "All"
+    ? marketItems
+    : marketItems.filter((item) => item.category === activeFilter);
+
+  const toggleVault = (title: string) => {
+    setOfferVault((current: Set<string>) => {
+      const next = new Set(current);
+      if (next.has(title)) {
+        next.delete(title);
+      } else {
+        next.add(title);
+      }
+      return next;
+    });
+    ui.playUiAction();
+  };
+
+  return (
+    <View style={styles.realmInteractiveWrap}>
+      <SectionTitle title="Sacred Market" subtitle="Curated exchange. Privacy-first listings." />
+
+      <ContentCard>
+        <Text style={styles.cardKicker}>FILTER BY CATEGORY</Text>
+        <View style={styles.realmChipWrap}>
+          {categories.map((cat) => (
+            <TouchableOpacity
+              key={cat}
+              style={[
+                styles.realmChip,
+                activeFilter === cat && { backgroundColor: ui.primaryColor, borderColor: ui.glowColor }
+              ]}
+              onPress={() => {
+                setActiveFilter(cat);
+                ui.playUiAction();
+              }}
+              activeOpacity={ui.actionOpacity}
+            >
+              <Text style={[styles.realmChipText, activeFilter === cat && styles.realmChipTextActive]}>{cat}</Text>
+            </TouchableOpacity>
+          ))}
+        </View>
+      </ContentCard>
+
+      <SectionTitle title="Listings" subtitle={`${filtered.length} item${filtered.length !== 1 ? "s" : ""} in the vault.`} />
+
+      {filtered.map((item) => {
+        const inVault = offerVault.has(item.title);
+        return (
+          <ContentCard key={item.title}>
+            <View style={styles.marketItemRow}>
+              <View style={{ flex: 1 }}>
+                <Text style={styles.cardKicker}>{item.category.toUpperCase()}</Text>
+                <Text style={styles.cardTitle}>{item.title}</Text>
+              </View>
+              <Text style={[styles.marketItemPrice, { color: ui.glowColor }]}>{item.price}</Text>
+            </View>
+            <TouchableOpacity
+              style={[
+                styles.secondaryButton,
+                { marginTop: 12, borderColor: inVault ? ui.glowColor : colors.borderBlack }
+              ]}
+              activeOpacity={ui.actionOpacity}
+              onPress={() => toggleVault(item.title)}
+            >
+              <Text style={[styles.secondaryButtonText, inVault && { color: ui.glowColor }]}>
+                {inVault ? "✓ In Offer Vault" : "Add to Offer Vault"}
+              </Text>
+            </TouchableOpacity>
+          </ContentCard>
+        );
+      })}
+
+      {offerVault.size > 0 && (
+        <ContentCard>
+          <Text style={styles.cardKicker}>OFFER VAULT</Text>
+          <Text style={styles.cardTitle}>{offerVault.size} item{offerVault.size !== 1 ? "s" : ""} held</Text>
+          <Text style={styles.bodyText}>
+            Items in the Offer Vault are staged for private negotiation and escrow-ready exchange.
+          </Text>
+        </ContentCard>
+      )}
+    </View>
+  );
+}
+
+function GrowthRealmInteractive({
+  profile,
+  journalEntries
+}: {
+  profile: BetaProfile;
+  journalEntries: JournalEntry[];
+}) {
+  const ui = useUiRuntime();
+  const defaultHabits = ["Morning reflection", "Mindful pause", "Evening review"];
+  const [habits, setHabits] = useState<Record<string, boolean>>(
+    Object.fromEntries(defaultHabits.map((h) => [h, false]))
+  );
+  const [signalIndex, setSignalIndex] = useState(0);
+
+  const toggleHabit = (name: string) => {
+    setHabits((current: Record<string, boolean>) => ({ ...current, [name]: !current[name] }));
+    ui.playUiAction();
+  };
+
+  const nextSignal = () => {
+    setSignalIndex((current: number) => (current + 1) % growthSignals.length);
+    ui.playUiAction();
+  };
+
+  // Build mood distribution from journal entries
+  const moodCounts: Record<string, number> = {};
+  for (const entry of journalEntries) {
+    moodCounts[entry.mood] = (moodCounts[entry.mood] ?? 0) + 1;
+  }
+  const moodEntries = Object.entries(moodCounts).sort((a, b) => b[1] - a[1]);
+  const dominantMood = moodEntries[0]?.[0] ?? null;
+
+  const currentSignal = growthSignals[signalIndex];
+
+  return (
+    <View style={styles.realmInteractiveWrap}>
+      <SectionTitle title="Growth Studio" subtitle="Track who you are becoming. Observe the patterns." />
+
+      <ContentCard>
+        <Text style={styles.cardKicker}>PATTERN LENS · TODAY'S SIGNAL</Text>
+        {currentSignal ? (
+          <>
+            <Text style={[styles.cardTitle, { marginBottom: 4 }]}>{currentSignal.label}: {currentSignal.value}</Text>
+            <Text style={styles.bodyText}>{currentSignal.detail}</Text>
+          </>
+        ) : null}
+        <PrimaryButton label="Next Growth Signal" onPress={nextSignal} />
+      </ContentCard>
+
+      <ContentCard>
+        <Text style={styles.cardKicker}>MOOD TRACKER</Text>
+        {journalEntries.length > 0 ? (
+          <>
+            <Text style={styles.cardTitle}>
+              {journalEntries.length} reflection{journalEntries.length !== 1 ? "s" : ""} logged
+            </Text>
+            {dominantMood && (
+              <Text style={styles.bodyText}>
+                Dominant mood: <Text style={{ color: ui.glowColor }}>{dominantMood}</Text>
+              </Text>
+            )}
+            <View style={styles.featureList}>
+              {moodEntries.slice(0, 5).map(([mood, count]) => (
+                <View key={mood} style={styles.growthMoodRow}>
+                  <Text style={[styles.featureText, { flex: 2 }]}>{mood}</Text>
+                  <View style={styles.growthMoodBar}>
+                    <View
+                      style={[
+                        styles.growthMoodFill,
+                        {
+                          width: `${Math.round((count / journalEntries.length) * 100)}%`,
+                          backgroundColor: ui.glowColor
+                        }
+                      ]}
+                    />
+                  </View>
+                  <Text style={[styles.cardMeta, { minWidth: 28, textAlign: "right", marginTop: 0 }]}>{count}</Text>
+                </View>
+              ))}
+            </View>
+          </>
+        ) : (
+          <Text style={styles.bodyText}>
+            No reflections logged yet. Write in the Journal tab to start tracking mood patterns here.
+          </Text>
+        )}
+      </ContentCard>
+
+      <ContentCard>
+        <Text style={styles.cardKicker}>HABIT SIGNALS</Text>
+        <Text style={styles.bodyText}>Check off your daily touchpoints.</Text>
+        <View style={[styles.featureList, { marginTop: 12 }]}>
+          {Object.entries(habits).map(([name, done]) => (
+            <TouchableOpacity
+              key={name}
+              style={styles.habitRow}
+              onPress={() => toggleHabit(name)}
+              activeOpacity={ui.actionOpacity}
+            >
+              <View style={[styles.habitCheck, done && { backgroundColor: ui.primaryColor, borderColor: ui.glowColor }]}>
+                {done && <Text style={styles.habitCheckMark}>✓</Text>}
+              </View>
+              <Text style={[styles.featureText, done && { color: ui.glowColor, textDecorationLine: "line-through" }]}>{name}</Text>
+            </TouchableOpacity>
+          ))}
+        </View>
+      </ContentCard>
+
+      {profile.birthDate && (
+        <ContentCard>
+          <Text style={styles.cardKicker}>IDENTITY ARC</Text>
+          <Text style={styles.cardTitle}>Sun {calcSunSign(profile.birthDate)}</Text>
+          <Text style={styles.bodyText}>
+            {signInterpretations[calcSunSign(profile.birthDate)]?.sun ?? ""}
+          </Text>
+          <Text style={styles.helperNote}>Cross-realm insight from your Spiritual Realm chart.</Text>
+        </ContentCard>
+      )}
+    </View>
+  );
+}
+
+// ─── End Realm Interactive Environments ─────────────────────────────────────
+
 const styles = StyleSheet.create({
   safe: {
     flex: 1,
@@ -3054,5 +3795,128 @@ const styles = StyleSheet.create({
     letterSpacing: 0.4,
     marginBottom: 6,
     textTransform: "uppercase"
+  },
+  realmInteractiveWrap: {
+    marginTop: spacing.md
+  },
+  confessionRow: {
+    flexDirection: "row",
+    alignItems: "flex-start",
+    gap: spacing.sm
+  },
+  confessionGhost: {
+    fontSize: 18,
+    marginTop: 2
+  },
+  socialPostRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: spacing.sm,
+    marginBottom: 4
+  },
+  socialPostAvatar: {
+    width: 40,
+    height: 40,
+    borderRadius: 20,
+    alignItems: "center",
+    justifyContent: "center"
+  },
+  socialPostAvatarText: {
+    color: colors.boneWhite,
+    fontSize: 16,
+    fontWeight: "900"
+  },
+  socialReactRow: {
+    flexDirection: "row",
+    marginTop: 8,
+    gap: spacing.sm
+  },
+  socialReactLabel: {
+    fontSize: 13,
+    fontWeight: "700"
+  },
+  threadRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: spacing.sm
+  },
+  threadUnreadDot: {
+    width: 28,
+    height: 28,
+    borderRadius: 14,
+    alignItems: "center",
+    justifyContent: "center"
+  },
+  threadUnreadText: {
+    color: colors.vaultBlack,
+    fontSize: 11,
+    fontWeight: "900"
+  },
+  threadExpanded: {
+    marginTop: spacing.md,
+    borderTopWidth: 1,
+    borderTopColor: colors.borderBlack,
+    paddingTop: spacing.md
+  },
+  threadMessageBubble: {
+    backgroundColor: "rgba(56,189,248,0.12)",
+    borderRadius: radius.md,
+    borderWidth: 1,
+    borderColor: "rgba(56,189,248,0.2)",
+    padding: spacing.sm,
+    marginBottom: spacing.xs
+  },
+  threadMessageText: {
+    color: colors.boneWhite,
+    fontSize: 14,
+    lineHeight: 20
+  },
+  marketItemRow: {
+    flexDirection: "row",
+    alignItems: "flex-start",
+    justifyContent: "space-between",
+    gap: spacing.sm
+  },
+  marketItemPrice: {
+    fontSize: 20,
+    fontWeight: "900",
+    marginTop: 4
+  },
+  growthMoodRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: spacing.sm,
+    marginBottom: 6
+  },
+  growthMoodBar: {
+    flex: 3,
+    height: 8,
+    backgroundColor: colors.borderBlack,
+    borderRadius: 4,
+    overflow: "hidden"
+  },
+  growthMoodFill: {
+    height: "100%",
+    borderRadius: 4
+  },
+  habitRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: spacing.sm,
+    paddingVertical: 6
+  },
+  habitCheck: {
+    width: 26,
+    height: 26,
+    borderRadius: 6,
+    borderWidth: 2,
+    borderColor: colors.borderBlack,
+    alignItems: "center",
+    justifyContent: "center"
+  },
+  habitCheckMark: {
+    color: colors.boneWhite,
+    fontSize: 14,
+    fontWeight: "900"
   }
 });

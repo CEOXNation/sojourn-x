@@ -80,6 +80,9 @@ export type BetaProfile = {
   privateMode: boolean;
   contactsSyncEnabled: boolean;
   onboardingComplete: boolean;
+  birthDate: string;
+  birthTime: string;
+  birthPlace: string;
 };
 
 export type ContactSyncPermission = "unknown" | "granted" | "denied" | "unavailable";
