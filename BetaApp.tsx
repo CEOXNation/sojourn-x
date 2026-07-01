@@ -2123,6 +2123,19 @@ function RealmsScreen({
         <GrowthRealmView profile={profile} onMakeHome={onMakeHome} />
       ) : selectedRealm.key === "messaging" ? (
         <MessagingRealmView profile={profile} onMakeHome={onMakeHome} />
+      ) : selectedRealm.key === "spiritual" ? (
+        <SpiritualRealmView
+          profile={profile}
+          birthData={birthData}
+          setBirthData={setBirthData}
+          spiritualQ={spiritualQ}
+          setSpiritualQ={setSpiritualQ}
+          personalization={personalization.spiritual}
+          setPersonalization={(value) => setPersonalization((prev) => ({ ...prev, spiritual: value }))}
+          reminder={reminders.spiritual}
+          setReminder={(patch) => setReminder("spiritual", patch)}
+          onMakeHome={onMakeHome}
+        />
       ) : selectedRealm.key === "social" ? (
         <SocialRealmScreen profile={profile} onMakeHome={onMakeHome} />
       ) : (
@@ -2151,6 +2164,12 @@ function RealmsScreen({
                 subtitle="Keep your trusted circle close without exposing a public graph."
               />
             )}
+
+            <RealmPersonalizationCard
+              realmKey={selectedRealm.key}
+              personalization={personalization}
+              setPersonalization={setPersonalization}
+            />
 
             <SectionTitle
               title="Environment Modules"
@@ -2193,8 +2212,6 @@ function RealmsScreen({
               </View>
             </ContentCard>
 
-            {selectedRealm.key === "spiritual" && <SpiritualOracleSuite />}
-
             <View style={styles.featureList}>
               {selectedRealm.features.map((feature) => (
                 <View key={feature} style={styles.featureRow}>
@@ -2203,6 +2220,11 @@ function RealmsScreen({
                 </View>
               ))}
             </View>
+
+            <RealmReminderCard
+              reminder={reminders[selectedRealm.key as keyof RealmReminders]}
+              onChange={(patch) => setReminder(selectedRealm.key, patch)}
+            />
 
             <TouchableOpacity
               style={[styles.secondaryButton, profile.homeRealm === selectedRealm.key && styles.secondaryButtonDisabled]}
@@ -2218,8 +2240,8 @@ function RealmsScreen({
             <Text style={styles.cardKicker}>CATEGORY</Text>
             <Text style={styles.cardTitle}>Multi-Realm Identity Platform</Text>
             <Text style={styles.bodyText}>
-              SojournX Beta now keeps a home realm, a preview realm, and a live profile so the category
-              is measurable instead of just promised.
+              SojournX Beta keeps a home realm, a preview realm, and a live profile so the category
+              is measurable — not just promised.
             </Text>
           </ContentCard>
         </>
@@ -4993,5 +5015,253 @@ const styles = StyleSheet.create({
     paddingVertical: 14,
     alignItems: "center",
     marginBottom: spacing.md
+  },
+  spirHeader: {
+    borderWidth: 1,
+    borderRadius: radius.lg,
+    padding: spacing.lg,
+    alignItems: "center",
+    marginBottom: spacing.md,
+    backgroundColor: "rgba(99,102,241,0.08)"
+  },
+  spirHeaderIcon: {
+    fontSize: 28,
+    letterSpacing: 6,
+    marginBottom: spacing.xs
+  },
+  spirHeaderTitle: {
+    color: colors.boneWhite,
+    fontSize: 22,
+    fontWeight: "900",
+    letterSpacing: 1
+  },
+  spirHeaderSub: {
+    fontSize: 13,
+    marginTop: spacing.xs,
+    textAlign: "center"
+  },
+  spirTabRow: {
+    flexDirection: "row",
+    gap: spacing.xs,
+    marginBottom: spacing.md
+  },
+  spirTab: {
+    flex: 1,
+    paddingVertical: 9,
+    paddingHorizontal: spacing.xs,
+    borderRadius: radius.md,
+    borderWidth: 1,
+    borderColor: colors.borderBlack,
+    alignItems: "center"
+  },
+  spirTabText: {
+    color: colors.mutedGray,
+    fontSize: 11,
+    fontWeight: "700",
+    textAlign: "center"
+  },
+  spirChartRow: {
+    flexDirection: "row",
+    flexWrap: "wrap",
+    gap: spacing.xs,
+    marginTop: spacing.sm
+  },
+  spirChip: {
+    backgroundColor: colors.cardBlack,
+    borderRadius: radius.sm,
+    paddingHorizontal: spacing.sm,
+    paddingVertical: spacing.xs,
+    alignItems: "center",
+    minWidth: 72
+  },
+  spirChipGlyph: {
+    fontSize: 16,
+    marginBottom: 2
+  },
+  spirChipLabel: {
+    color: colors.mutedGray,
+    fontSize: 9,
+    fontWeight: "700",
+    letterSpacing: 1,
+    textTransform: "uppercase"
+  },
+  spirChipValue: {
+    color: colors.boneWhite,
+    fontSize: 12,
+    fontWeight: "700",
+    marginTop: 2
+  },
+  spirKeywordsRow: {
+    flexDirection: "row",
+    flexWrap: "wrap",
+    gap: spacing.xs,
+    marginTop: spacing.sm
+  },
+  spirKeyword: {
+    borderWidth: 1,
+    borderRadius: radius.sm,
+    paddingHorizontal: spacing.sm,
+    paddingVertical: 4
+  },
+  spirKeywordText: {
+    fontSize: 11,
+    fontWeight: "700"
+  },
+  spirQGrid: {
+    flexDirection: "row",
+    flexWrap: "wrap",
+    gap: spacing.xs,
+    marginTop: spacing.sm
+  },
+  spirQOption: {
+    width: "48%",
+    borderWidth: 1,
+    borderColor: colors.borderBlack,
+    borderRadius: radius.md,
+    padding: spacing.sm,
+    backgroundColor: colors.cardBlack
+  },
+  spirQOptionSmall: {
+    paddingHorizontal: spacing.sm,
+    paddingVertical: spacing.xs,
+    borderWidth: 1,
+    borderColor: colors.borderBlack,
+    borderRadius: radius.sm,
+    backgroundColor: colors.cardBlack
+  },
+  spirQOptionLabel: {
+    color: colors.boneWhite,
+    fontSize: 13,
+    fontWeight: "700"
+  },
+  spirQOptionSub: {
+    color: colors.mutedGray,
+    fontSize: 11,
+    marginTop: 3
+  },
+  spirMoonRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: spacing.md,
+    marginTop: spacing.sm
+  },
+  spirMoonEmoji: {
+    fontSize: 40
+  },
+  spirMoonInfo: {
+    flex: 1
+  },
+  spirAffirmRow: {
+    flexDirection: "row",
+    gap: spacing.sm,
+    marginTop: spacing.sm,
+    alignItems: "flex-start"
+  },
+  spirAffirmBullet: {
+    fontSize: 14,
+    marginTop: 2
+  },
+  spirAffirmText: {
+    flex: 1,
+    color: colors.boneWhite,
+    fontSize: 14,
+    lineHeight: 22,
+    fontStyle: "italic"
+  },
+  spirOracleCard: {
+    alignItems: "center",
+    paddingVertical: spacing.md,
+    gap: spacing.xs
+  },
+  spirOracleEmoji: {
+    fontSize: 52
+  },
+  spirOracleName: {
+    fontSize: 20,
+    fontWeight: "900",
+    letterSpacing: 1
+  },
+  spirOracleMeaningBadge: {
+    borderWidth: 1,
+    borderRadius: radius.sm,
+    paddingHorizontal: spacing.md,
+    paddingVertical: 4,
+    marginTop: 4
+  },
+  spirOracleMeaning: {
+    color: colors.mutedGray,
+    fontSize: 11,
+    fontWeight: "700",
+    letterSpacing: 1,
+    textTransform: "uppercase"
+  },
+  spirOracleGuidance: {
+    color: colors.boneWhite,
+    fontSize: 15,
+    lineHeight: 24,
+    fontStyle: "italic",
+    textAlign: "center",
+    marginTop: spacing.sm,
+    paddingHorizontal: spacing.sm
+  },
+  spirReflectionPrompt: {
+    color: colors.boneWhite,
+    fontSize: 17,
+    lineHeight: 28,
+    fontStyle: "italic",
+    marginTop: spacing.sm
+  },
+  spirViewChartBtn: {
+    borderWidth: 1,
+    borderRadius: radius.md,
+    padding: spacing.sm,
+    alignItems: "center",
+    marginTop: spacing.sm
+  },
+  spirViewChartText: {
+    fontSize: 13,
+    fontWeight: "700"
+  },
+  rpRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between"
+  },
+  rpLabelCol: {
+    flex: 1,
+    marginRight: spacing.sm
+  },
+  rpHint: {
+    fontSize: 12,
+    marginTop: spacing.xs
+  },
+  rpExpandBtn: {
+    marginTop: spacing.sm
+  },
+  rpExpandText: {
+    fontSize: 12,
+    fontWeight: "700"
+  },
+  rpExpandedBlock: {
+    marginTop: spacing.sm
+  },
+  rpFreqRow: {
+    flexDirection: "row",
+    flexWrap: "wrap",
+    gap: spacing.xs,
+    marginTop: spacing.xs
+  },
+  rpFreqChip: {
+    paddingHorizontal: spacing.sm,
+    paddingVertical: 6,
+    borderRadius: radius.sm,
+    borderWidth: 1,
+    borderColor: colors.borderBlack,
+    backgroundColor: colors.cardBlack
+  },
+  rpFreqText: {
+    color: colors.mutedGray,
+    fontSize: 12,
+    fontWeight: "600"
   }
 });

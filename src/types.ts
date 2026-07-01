@@ -128,3 +128,107 @@ export type JournalEntry = {
   reflection: string;
   createdAt: string;
 };
+
+// ─── Astrology & Spiritual ─────────────────────────────────────────────────
+
+export type ZodiacSign =
+  | "aries" | "taurus" | "gemini" | "cancer" | "leo" | "virgo"
+  | "libra" | "scorpio" | "sagittarius" | "capricorn" | "aquarius" | "pisces";
+
+export type SpiritualElement = "fire" | "earth" | "air" | "water";
+
+export type SpiritualPath = "seeker" | "mystic" | "warrior" | "healer" | "sage" | "creator";
+
+export type AffirmationStyle = "gentle" | "bold" | "poetic";
+
+export type PracticeTime = "morning" | "evening" | "flexible";
+
+export type MoonPhaseAffinity = "new" | "waxing" | "full" | "waning";
+
+export type SpiritualIntention =
+  | "love" | "purpose" | "health" | "grief" | "identity" | "abundance"
+  | "clarity" | "protection" | "creativity" | "peace";
+
+export type BirthData = {
+  birthDate: string;    // YYYY-MM-DD
+  birthTime: string;    // HH:MM  (24h)
+  birthPlace: string;
+  hemisphere: "north" | "south";
+};
+
+export type SpiritualQuestionnaire = {
+  element: SpiritualElement | "";
+  spiritualPath: SpiritualPath | "";
+  intentions: SpiritualIntention[];
+  affirmationStyle: AffirmationStyle | "";
+  practiceTime: PracticeTime | "";
+  moonPhaseAffinity: MoonPhaseAffinity | "";
+  oracleDeckStyle: "cosmic" | "nature" | "shadow" | "celestial" | "";
+};
+
+// ─── Realm Personalization ─────────────────────────────────────────────────
+
+export type AnonymousPersonalization = {
+  topicInterests: string[];
+  postingTone: "reflective" | "direct" | "poetic" | "raw";
+  personaName: string;
+};
+
+export type SocialPersonalization = {
+  feedOrder: "chronological" | "curated" | "discovery";
+  visibilityDefault: "public" | "circle" | "private";
+  showOnlineStatus: boolean;
+};
+
+export type MessagingPersonalization = {
+  messageTheme: "vault" | "midnight" | "ember";
+  soundStyle: "subtle" | "silent" | "crystal";
+  readReceipts: boolean;
+};
+
+export type MarketplacePersonalization = {
+  categoryPreferences: string[];
+  anonymousOnly: boolean;
+  showPriceAlerts: boolean;
+};
+
+export type SpiritualPersonalization = {
+  showDailyOracle: boolean;
+  showMoonPhase: boolean;
+  affirmationCount: 3 | 5 | 7;
+};
+
+export type GrowthPersonalization = {
+  focusAreas: string[];
+  habitFrequency: "daily" | "weekly";
+  reflectionDepth: "brief" | "detailed" | "guided";
+};
+
+export type RealmPersonalization = {
+  anonymous: AnonymousPersonalization;
+  social: SocialPersonalization;
+  messaging: MessagingPersonalization;
+  marketplace: MarketplacePersonalization;
+  spiritual: SpiritualPersonalization;
+  growth: GrowthPersonalization;
+};
+
+// ─── Reminders ────────────────────────────────────────────────────────────
+
+export type ReminderFrequency = "daily" | "weekdays" | "weekends" | "weekly";
+
+export type ReminderConfig = {
+  enabled: boolean;
+  time: string;              // HH:MM
+  frequency: ReminderFrequency;
+  label: string;
+};
+
+export type RealmReminders = {
+  anonymous: ReminderConfig;
+  social: ReminderConfig;
+  messaging: ReminderConfig;
+  marketplace: ReminderConfig;
+  spiritual: ReminderConfig;
+  growth: ReminderConfig;
+};

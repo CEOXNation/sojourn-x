@@ -1,9 +1,20 @@
 import AsyncStorage from "@react-native-async-storage/async-storage";
 
-import type { ContactSyncState, SyncedContact } from "./types";
+import type {
+  BirthData,
+  ContactSyncState,
+  RealmPersonalization,
+  RealmReminders,
+  SpiritualQuestionnaire,
+  SyncedContact
+} from "./types";
 
-const CONTACTS_KEY = "sojournx.beta.contacts";
-const CONTACTS_STATE_KEY = "sojournx.beta.contacts.state";
+const CONTACTS_KEY               = "sojournx.beta.contacts";
+const CONTACTS_STATE_KEY         = "sojournx.beta.contacts.state";
+export const BIRTH_DATA_KEY      = "sojournx.beta.birth";
+export const SPIRITUAL_Q_KEY     = "sojournx.beta.spiritual.questionnaire";
+export const PERSONALIZATION_KEY = "sojournx.beta.personalization";
+export const REMINDERS_KEY       = "sojournx.beta.reminders";
 
 export async function loadJson<T>(key: string, fallback: T): Promise<T> {
   try {
@@ -56,4 +67,42 @@ export async function saveContactSyncState(state: ContactSyncState): Promise<voi
 
 export async function clearContactSyncCache(): Promise<void> {
   await clearKeys([CONTACTS_KEY, CONTACTS_STATE_KEY]);
+}
+
+// ─── Birth & Spiritual ─────────────────────────────────────────────────────
+
+export async function loadBirthData(): Promise<BirthData | null> {
+  return loadJson<BirthData | null>(BIRTH_DATA_KEY, null);
+}
+
+export async function saveBirthData(data: BirthData): Promise<void> {
+  await saveJson(BIRTH_DATA_KEY, data);
+}
+
+export async function loadSpiritualQuestionnaire(): Promise<SpiritualQuestionnaire | null> {
+  return loadJson<SpiritualQuestionnaire | null>(SPIRITUAL_Q_KEY, null);
+}
+
+export async function saveSpiritualQuestionnaire(q: SpiritualQuestionnaire): Promise<void> {
+  await saveJson(SPIRITUAL_Q_KEY, q);
+}
+
+// ─── Personalization ───────────────────────────────────────────────────────
+
+export async function loadPersonalization(fallback: RealmPersonalization): Promise<RealmPersonalization> {
+  return loadJson<RealmPersonalization>(PERSONALIZATION_KEY, fallback);
+}
+
+export async function savePersonalization(p: RealmPersonalization): Promise<void> {
+  await saveJson(PERSONALIZATION_KEY, p);
+}
+
+// ─── Reminders ─────────────────────────────────────────────────────────────
+
+export async function loadReminders(fallback: RealmReminders): Promise<RealmReminders> {
+  return loadJson<RealmReminders>(REMINDERS_KEY, fallback);
+}
+
+export async function saveReminders(r: RealmReminders): Promise<void> {
+  await saveJson(REMINDERS_KEY, r);
 }
