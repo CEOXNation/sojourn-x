@@ -152,6 +152,8 @@ npm run eas:build:ios
 
 Beta builds are distributed via a shareable EAS install link — no App Store or Play Store submission required.
 
+For the internal-beta and store-submission checklist, see [Mobile release checklist](docs/MOBILE_RELEASE.md).
+
 ### Advanced Engineering Commands
 
 ```bash
