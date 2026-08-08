@@ -81,6 +81,51 @@ The active app entrypoint now launches the first true SojournX beta with:
 - Live feed and growth journal interactions
 - Resettable beta vault state for testing
 
+## Soul Activation — Design Customization
+
+The Settings screen now includes a full soul activation customization suite. All preferences are persisted locally in `AsyncStorage` under the key `sojournx.beta.ui` and survive app restarts. If a setting is absent from a stored snapshot (e.g. after an update), it is filled in from the default automatically.
+
+### Typography Studio
+
+Three font family presets are available in **Settings → Typography Studio**:
+
+| Preset | Description |
+|--------|-------------|
+| System | Default platform typeface (San Francisco on iOS, Roboto on Android) |
+| Serif  | Georgia — elegant, editorial feel |
+| Mono   | Courier New / monospace — technical, precise feel |
+
+Font scale presets (`Small`, `Regular`, `Large`) multiply the base text sizes, independently of the global UI size setting.
+
+### Mood Modes
+
+Four mood profiles are available in **Settings → Mood Mode**:
+
+| Mode  | Accent | Motion    | Character               |
+|-------|--------|-----------|-------------------------|
+| None  | (accent setting) | (speed setting) | No override |
+| Focus | Blue   | Snappy    | Sharp, clear, distraction-free |
+| Flow  | Emerald | Calm     | Smooth, rhythmic, open |
+| Dream | Violet | Very calm | Soft, expansive, imaginative |
+
+Mood modes override the accent color and transition duration instantly. Switching modes requires no restart.
+
+Reduced-motion support: the three mood modes explicitly set `transitionDuration` (`focus` = 150 ms, `flow` = 380 ms, `dream` = 480 ms). Users who prefer fast transitions should use **Focus** mode or the manual **Transition Speed: Snappy** setting.
+
+### Base Color Mode
+
+**Settings → Base Mode** toggles between Dark (vault default) and Light palettes. In light mode:
+- App background: `#F0EEE9`
+- Card surfaces: `#FFFFFF`
+- Borders: `#D9D7D0`
+- Primary text: `#1A1A1A`
+
+In dark mode the existing realm-responsive gradient backgrounds apply.
+
+### Settings Storage
+
+All design preferences are stored at key `sojournx.beta.ui` via `@react-native-async-storage/async-storage`. The schema is defined by the `UiPreferences` type in `src/types.ts`. New fields added in this release (`fontFamily`, `fontScale`, `moodMode`, `baseMode`) default gracefully using the spread merge in `BetaApp.tsx`, so existing stored settings are not lost on upgrade.
+
 ## Important Legal / Security Notes
 
 This prototype is a frontend scaffold only.
