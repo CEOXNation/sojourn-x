@@ -520,7 +520,7 @@ export default function BetaApp() {
       moodProfile: activeMood,
       baseColors: resolvedBaseColors
     }),
-    [uiPreferences, blendEnabled, resolvedPrimaryColor, resolvedGlowColor, uiScale, density, cornerScale, activeRealmTheme, resolvedFontFamily, resolvedFontScale, activeMood, resolvedBaseColors]
+    [uiPreferences, blendEnabled, activeRealmTheme]
   );
 
   useEffect(() => {
@@ -2089,7 +2089,9 @@ function InputField({
         styles.input,
         multiline && styles.inputMultiline,
         {
-          borderColor: ui.preferences.style === "glass" ? "rgba(255,255,255,0.25)" : ui.baseColors.border,
+          borderColor: ui.preferences.style === "glass"
+            ? (ui.preferences.baseMode === "light" ? "rgba(0,0,0,0.15)" : "rgba(255,255,255,0.25)")
+            : ui.baseColors.border,
           backgroundColor: ui.baseColors.surface,
           color: ui.baseColors.primaryText,
           fontSize: 14 * ui.scale * ui.fontScale,
@@ -2450,8 +2452,8 @@ function ContentCard({ children }: { children: React.ReactNode }) {
   const cardPreset =
     ui.preferences.style === "glass"
       ? {
-          backgroundColor: "rgba(255,255,255,0.06)",
-          borderColor: "rgba(255,255,255,0.18)"
+          backgroundColor: ui.preferences.baseMode === "light" ? "rgba(255,255,255,0.72)" : "rgba(255,255,255,0.06)",
+          borderColor: ui.preferences.baseMode === "light" ? "rgba(0,0,0,0.12)" : "rgba(255,255,255,0.18)"
         }
       : ui.preferences.style === "mono"
         ? {
