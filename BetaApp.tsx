@@ -54,6 +54,7 @@ import { createEmptyContactSyncState, syncTrustedContacts } from "./src/features
 import { colors, radius, shadow, spacing } from "./src/theme";
 import { Analytics } from "@vercel/analytics/react";
 import { SpeedInsights } from "@vercel/speed-insights/react";
+import { registerPwa } from "./src/pwa";
 import type {
   BetaProfile,
   BetaTab,
@@ -246,6 +247,12 @@ export default function BetaApp() {
   const [pulseRealmKey, setPulseRealmKey] = useState<RealmKey>(defaultProfile.homeRealm);
   const [journalBody, setJournalBody] = useState("");
   const [journalMood, setJournalMood] = useState(betaMoods[1]);
+
+  useEffect(() => {
+    if (Platform.OS === "web") {
+      registerPwa();
+    }
+  }, []);
 
   useEffect(() => {
     let cancelled = false;

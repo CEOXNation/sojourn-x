@@ -118,6 +118,8 @@ The web deploy target is configured for Vercel static export and the production 
 
 The Vercel config also redirects `www.sojournx.xyz` to the apex domain so the deployed site stays canonical.
 
+The site is browser-installable as a Progressive Web App; see [PWA installation](docs/PWA.md).
+
 Build locally with:
 
 ```bash
