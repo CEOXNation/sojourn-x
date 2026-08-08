@@ -112,6 +112,15 @@ npm start
 
 Then open with Expo Go, Android emulator, iOS simulator, or web depending on your Expo setup.
 
+## Contributor Workflow
+
+This repository now uses a documented multi-agent operating model in [`AGENTS.md`](AGENTS.md).
+
+- Open pull requests instead of pushing directly to `main`
+- Use the shared PR structure for goal, scope, risks, and test plan
+- Include accessibility and performance smoke notes for affected flows
+- Reference dependent agents when a change crosses UX systems, motion, persistence, accessibility, performance, security/privacy, QA/release, or product narrative
+
 ## Deployment
 
 The web deploy target is configured for Vercel static export and the production domain is [sojournx.xyz](https://sojournx.xyz).
