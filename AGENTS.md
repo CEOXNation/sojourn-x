@@ -39,6 +39,8 @@ Every agent PR should use this structure:
 
 ## Execution Order For The Next Two Sprints
 
+This sequence reflects the current planning snapshot and should be reviewed and updated at the start of each sprint cycle.
+
 ### Sprint 1 — Foundations
 
 1. `sojourn-ux-systems`
