@@ -73,7 +73,11 @@ import type {
   UiScale,
   UiTransitionSpeed,
   UiTransitionStyle,
-  UiStylePreset
+  UiStylePreset,
+  UiFontFamily,
+  UiFontScale,
+  UiMoodMode,
+  UiBaseMode
 } from "./src/types";
 
 const STORAGE_KEYS = {
@@ -116,7 +120,11 @@ const defaultUiPreferences: UiPreferences = {
   actionStyle: "balanced",
   soundEnabled: true,
   soundPack: "soft",
-  soundVolume: 0.45
+  soundVolume: 0.45,
+  fontFamily: "system",
+  fontScale: "regular",
+  moodMode: "none",
+  baseMode: "dark"
 };
 
 const publicSiteUrl = "https://sojournx.xyz";
@@ -167,6 +175,72 @@ const actionOpacityMap: Record<UiActionStyle, number> = {
   bold: 0.65
 };
 
+const fontFamilyMap: Record<UiFontFamily, string | undefined> = {
+  system: undefined,
+  serif: Platform.OS === "ios" ? "Georgia" : "serif",
+  mono: Platform.OS === "ios" ? "Courier New" : "monospace"
+};
+
+const fontScaleMultiplierMap: Record<UiFontScale, number> = {
+  small: 0.88,
+  regular: 1,
+  large: 1.14
+};
+
+type MoodProfile = {
+  accent: string;
+  glow: string;
+  transitionDuration: number;
+  description: string;
+};
+
+const moodProfileMap: Record<UiMoodMode, MoodProfile> = {
+  none: { accent: "", glow: "", transitionDuration: 0, description: "No mood override." },
+  focus: {
+    accent: "#2563EB",
+    glow: "#60A5FA",
+    transitionDuration: 150,
+    description: "Sharp, clear, distraction-free."
+  },
+  flow: {
+    accent: "#0E9F6E",
+    glow: "#34D399",
+    transitionDuration: 380,
+    description: "Smooth, rhythmic, open."
+  },
+  dream: {
+    accent: "#7C3AED",
+    glow: "#A78BFA",
+    transitionDuration: 480,
+    description: "Soft, expansive, imaginative."
+  }
+};
+
+type BaseColors = {
+  background: string;
+  surface: string;
+  border: string;
+  primaryText: string;
+  mutedText: string;
+};
+
+const baseModeColors: Record<UiBaseMode, BaseColors> = {
+  dark: {
+    background: colors.vaultBlack,
+    surface: colors.cardBlack,
+    border: colors.borderBlack,
+    primaryText: colors.boneWhite,
+    mutedText: colors.mutedGray
+  },
+  light: {
+    background: "#F0EEE9",
+    surface: "#FFFFFF",
+    border: "#D9D7D0",
+    primaryText: "#1A1A1A",
+    mutedText: "#6B6B6B"
+  }
+};
+
 const actionSoundLibrary: Record<UiSoundPack, number> = {
   soft: require("./src/assets/sounds/soft-tap.wav"),
   tech: require("./src/assets/sounds/tech-tap.wav"),
@@ -197,6 +271,14 @@ type UiRuntime = {
   actionOpacity: number;
   transitionDuration: number;
   activeRealmTheme: { background: string; wash: string; orb: string };
+  /** Resolved font family string (undefined = system default) */
+  fontFamily: string | undefined;
+  /** Combined font size multiplier (scale × fontScale) */
+  fontScale: number;
+  /** Active mood profile (null when moodMode is "none") */
+  moodProfile: MoodProfile | null;
+  /** Active base color palette */
+  baseColors: BaseColors;
 };
 
 const UiRuntimeContext = React.createContext<UiRuntime | null>(null);
@@ -219,7 +301,11 @@ function useUiRuntime(): UiRuntime {
       actionScale: actionScaleMap.balanced,
       actionOpacity: actionOpacityMap.balanced,
       transitionDuration: transitionDurationMap.balanced,
-      activeRealmTheme: realmVisualThemes.anonymous
+      activeRealmTheme: realmVisualThemes.anonymous,
+      fontFamily: undefined,
+      fontScale: 1,
+      moodProfile: null,
+      baseColors: baseModeColors.dark
     };
   }
 
@@ -376,6 +462,13 @@ export default function BetaApp() {
   const density = densityMap[uiPreferences.density];
   const cornerScale = cornerMap[uiPreferences.corners];
 
+  const activeMood = uiPreferences.moodMode !== "none" ? moodProfileMap[uiPreferences.moodMode] : null;
+  const resolvedPrimaryColor = activeMood ? activeMood.accent : primaryColor;
+  const resolvedGlowColor = activeMood ? activeMood.glow : glowColor;
+  const resolvedFontFamily = fontFamilyMap[uiPreferences.fontFamily];
+  const resolvedFontScale = fontScaleMultiplierMap[uiPreferences.fontScale];
+  const resolvedBaseColors = baseModeColors[uiPreferences.baseMode];
+
   const activeRealmKey: RealmKey =
     activeTab === "Realms"
       ? selectedRealmKey
@@ -413,17 +506,21 @@ export default function BetaApp() {
           }
         })();
       },
-      primaryColor,
-      glowColor,
+      primaryColor: resolvedPrimaryColor,
+      glowColor: resolvedGlowColor,
       scale: uiScale,
       density,
       cornerScale,
       actionScale: actionScaleMap[uiPreferences.actionStyle],
       actionOpacity: actionOpacityMap[uiPreferences.actionStyle],
-      transitionDuration: transitionDurationMap[uiPreferences.transitionSpeed],
-      activeRealmTheme
+      transitionDuration: activeMood ? activeMood.transitionDuration : transitionDurationMap[uiPreferences.transitionSpeed],
+      activeRealmTheme,
+      fontFamily: resolvedFontFamily,
+      fontScale: resolvedFontScale,
+      moodProfile: activeMood,
+      baseColors: resolvedBaseColors
     }),
-    [uiPreferences, blendEnabled, primaryColor, glowColor, uiScale, density, cornerScale, activeRealmTheme]
+    [uiPreferences, blendEnabled, activeRealmTheme]
   );
 
   useEffect(() => {
@@ -494,12 +591,12 @@ export default function BetaApp() {
     );
   } else {
     content = (
-      <SafeAreaView style={[styles.safe, { backgroundColor: activeRealmTheme.background }]}>
-        <StatusBar barStyle="light-content" />
+      <SafeAreaView style={[styles.safe, { backgroundColor: uiPreferences.baseMode === "light" ? resolvedBaseColors.background : activeRealmTheme.background }]}>
+        <StatusBar barStyle={uiPreferences.baseMode === "light" ? "dark-content" : "light-content"} />
 
-        <View style={[styles.appShell, { backgroundColor: activeRealmTheme.background }]}> 
-          <View style={[styles.realmThemeWash, { backgroundColor: activeRealmTheme.wash }]} />
-          <View style={[styles.realmThemeOrb, { backgroundColor: activeRealmTheme.orb }]} />
+        <View style={[styles.appShell, { backgroundColor: uiPreferences.baseMode === "light" ? resolvedBaseColors.background : activeRealmTheme.background }]}> 
+          {uiPreferences.baseMode === "dark" && <View style={[styles.realmThemeWash, { backgroundColor: activeRealmTheme.wash }]} />}
+          {uiPreferences.baseMode === "dark" && <View style={[styles.realmThemeOrb, { backgroundColor: activeRealmTheme.orb }]} />}
           <Header profile={profile} />
           <Nav activeTab={activeTab} setActiveTab={setActiveTab} />
 
@@ -1877,6 +1974,80 @@ function SettingsScreen({
       </ContentCard>
 
       <ContentCard>
+        <Text style={[styles.cardKicker, { color: ui.primaryColor }]}>TYPOGRAPHY STUDIO</Text>
+        <Text style={[styles.cardTitle, { color: ui.baseColors.primaryText, fontFamily: ui.fontFamily }]}>Shape how words feel on screen.</Text>
+        <Text style={[styles.bodyText, { color: ui.baseColors.mutedText, fontFamily: ui.fontFamily }]}>
+          Font family, size scale, and density work together to create your reading environment.
+        </Text>
+
+        <FieldLabel label="Font Family" helper="Typeface personality for body and UI text." />
+        <SelectionRow<UiFontFamily>
+          items={[
+            { key: "system", label: "System" },
+            { key: "serif", label: "Serif" },
+            { key: "mono", label: "Mono" }
+          ]}
+          value={ui.preferences.fontFamily}
+          onSelect={(fontFamily) => ui.setPreferences((current) => ({ ...current, fontFamily }))}
+        />
+
+        <FieldLabel label="Font Scale" helper="Overall text size relative to UI scale." />
+        <SelectionRow<UiFontScale>
+          items={[
+            { key: "small", label: "Small" },
+            { key: "regular", label: "Regular" },
+            { key: "large", label: "Large" }
+          ]}
+          value={ui.preferences.fontScale}
+          onSelect={(fontScale) => ui.setPreferences((current) => ({ ...current, fontScale }))}
+        />
+      </ContentCard>
+
+      <ContentCard>
+        <Text style={[styles.cardKicker, { color: ui.primaryColor }]}>MOOD MODE</Text>
+        <Text style={[styles.cardTitle, { color: ui.baseColors.primaryText, fontFamily: ui.fontFamily }]}>Set the atmosphere of your session.</Text>
+        <Text style={[styles.bodyText, { color: ui.baseColors.mutedText, fontFamily: ui.fontFamily }]}>
+          Mood modes tune accent color and motion speed to match your energy. Switching is instant.
+        </Text>
+
+        <FieldLabel label="Active Mood" helper="Select the feeling you want to inhabit right now." />
+        <SelectionRow<UiMoodMode>
+          items={[
+            { key: "none", label: "None" },
+            { key: "focus", label: "Focus" },
+            { key: "flow", label: "Flow" },
+            { key: "dream", label: "Dream" }
+          ]}
+          value={ui.preferences.moodMode}
+          onSelect={(moodMode) => ui.setPreferences((current) => ({ ...current, moodMode }))}
+        />
+
+        {ui.moodProfile && (
+          <Text style={[styles.fieldHelper, { marginTop: spacing.xs, color: ui.baseColors.mutedText }]}>
+            {ui.moodProfile.description}
+          </Text>
+        )}
+      </ContentCard>
+
+      <ContentCard>
+        <Text style={[styles.cardKicker, { color: ui.primaryColor }]}>BASE MODE</Text>
+        <Text style={[styles.cardTitle, { color: ui.baseColors.primaryText, fontFamily: ui.fontFamily }]}>Light or dark foundation.</Text>
+        <Text style={[styles.bodyText, { color: ui.baseColors.mutedText, fontFamily: ui.fontFamily }]}>
+          Choose the base color palette for the interface. Dark is the default vault atmosphere.
+        </Text>
+
+        <FieldLabel label="Color Mode" helper="Governs background and surface colors across the app." />
+        <SelectionRow<UiBaseMode>
+          items={[
+            { key: "dark", label: "Dark" },
+            { key: "light", label: "Light" }
+          ]}
+          value={ui.preferences.baseMode}
+          onSelect={(baseMode) => ui.setPreferences((current) => ({ ...current, baseMode }))}
+        />
+      </ContentCard>
+
+      <ContentCard>
         <Text style={styles.cardKicker}>DEVICE CONTROLS</Text>
         <Text style={styles.cardTitle}>Local beta data only.</Text>
         <Text style={styles.bodyText}>
@@ -1897,8 +2068,8 @@ function FieldLabel({ label, helper }: { label: string; helper: string }) {
 
   return (
     <View style={styles.fieldLabelWrap}>
-      <Text style={[styles.fieldLabel, { fontSize: 14 * ui.scale }]}>{label}</Text>
-      <Text style={styles.fieldHelper}>{helper}</Text>
+      <Text style={[styles.fieldLabel, { fontSize: 14 * ui.scale * ui.fontScale, color: ui.baseColors.primaryText, fontFamily: ui.fontFamily }]}>{label}</Text>
+      <Text style={[styles.fieldHelper, { color: ui.baseColors.mutedText }]}>{helper}</Text>
     </View>
   );
 }
@@ -1912,14 +2083,19 @@ function InputField({
   return (
     <TextInput
       {...props}
-      placeholderTextColor={colors.mutedGray}
+      placeholderTextColor={ui.baseColors.mutedText}
       multiline={multiline}
       style={[
         styles.input,
         multiline && styles.inputMultiline,
         {
-          borderColor: ui.preferences.style === "glass" ? "rgba(255,255,255,0.25)" : colors.borderBlack,
-          fontSize: 14 * ui.scale,
+          borderColor: ui.preferences.style === "glass"
+            ? (ui.preferences.baseMode === "light" ? "rgba(0,0,0,0.15)" : "rgba(255,255,255,0.25)")
+            : ui.baseColors.border,
+          backgroundColor: ui.baseColors.surface,
+          color: ui.baseColors.primaryText,
+          fontSize: 14 * ui.scale * ui.fontScale,
+          fontFamily: ui.fontFamily,
           borderRadius: Math.round(radius.md * ui.cornerScale)
         }
       ]}
@@ -2276,8 +2452,8 @@ function ContentCard({ children }: { children: React.ReactNode }) {
   const cardPreset =
     ui.preferences.style === "glass"
       ? {
-          backgroundColor: "rgba(255,255,255,0.06)",
-          borderColor: "rgba(255,255,255,0.18)"
+          backgroundColor: ui.preferences.baseMode === "light" ? "rgba(255,255,255,0.72)" : "rgba(255,255,255,0.06)",
+          borderColor: ui.preferences.baseMode === "light" ? "rgba(0,0,0,0.12)" : "rgba(255,255,255,0.18)"
         }
       : ui.preferences.style === "mono"
         ? {
@@ -2285,8 +2461,8 @@ function ContentCard({ children }: { children: React.ReactNode }) {
             borderColor: "#4B5563"
           }
         : {
-            backgroundColor: colors.cardBlack,
-            borderColor: colors.borderBlack
+            backgroundColor: ui.baseColors.surface,
+            borderColor: ui.baseColors.border
           };
 
   return (
@@ -2317,10 +2493,12 @@ function Pill({ label }: { label: string }) {
 }
 
 function SectionTitle({ title, subtitle }: { title: string; subtitle: string }) {
+  const ui = useUiRuntime();
+
   return (
     <View style={styles.sectionTitle}>
-      <Text style={styles.sectionHeading}>{title}</Text>
-      <Text style={styles.sectionSubtitle}>{subtitle}</Text>
+      <Text style={[styles.sectionHeading, { color: ui.baseColors.primaryText, fontFamily: ui.fontFamily }]}>{title}</Text>
+      <Text style={[styles.sectionSubtitle, { color: ui.baseColors.mutedText }]}>{subtitle}</Text>
     </View>
   );
 }

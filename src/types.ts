@@ -48,6 +48,18 @@ export type UiActionStyle = "subtle" | "balanced" | "bold";
 
 export type UiSoundPack = "soft" | "tech" | "cosmic";
 
+/** Typography font family presets */
+export type UiFontFamily = "system" | "serif" | "mono";
+
+/** Typography scale multiplier presets */
+export type UiFontScale = "small" | "regular" | "large";
+
+/** Mood atmosphere presets */
+export type UiMoodMode = "none" | "focus" | "flow" | "dream";
+
+/** Light / dark base color mode */
+export type UiBaseMode = "dark" | "light";
+
 export type UiPreferences = {
   accent: UiAccent;
   style: UiStylePreset;
@@ -60,6 +72,13 @@ export type UiPreferences = {
   soundEnabled: boolean;
   soundPack: UiSoundPack;
   soundVolume: number;
+  /** Typography */
+  fontFamily: UiFontFamily;
+  fontScale: UiFontScale;
+  /** Mood atmosphere */
+  moodMode: UiMoodMode;
+  /** Base color mode */
+  baseMode: UiBaseMode;
 };
 
 export type NavTab = BetaTab;
