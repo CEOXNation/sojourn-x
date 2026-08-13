@@ -177,7 +177,7 @@ const actionOpacityMap: Record<UiActionStyle, number> = {
 
 const fontFamilyMap: Record<UiFontFamily, string | undefined> = {
   system: undefined,
-  serif: "Georgia",
+  serif: Platform.OS === "ios" ? "Georgia" : "serif",
   mono: Platform.OS === "ios" ? "Courier New" : "monospace"
 };
 
